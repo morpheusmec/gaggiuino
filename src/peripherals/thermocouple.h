@@ -19,7 +19,8 @@ static inline void thermocoupleInit(void) {
 }
 
 static inline float thermocoupleRead(void) {
-  return thermocouple.readCelsius();
+  return 100.0;
+  // return thermocouple.readCelsius();
 }
 
 #endif
