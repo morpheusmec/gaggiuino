@@ -9,7 +9,12 @@
 #define thermoCLK     PA5
 
 #define zcPin         PA0
-#define brewPin       PC14
+#define cup1DtcPin    PA4
+#define cup2DtcPin    PC14
+#define cup2PressPin  PB1
+#define sol2Pin       PB3
+#define sol3Pin       PB5
+#define brevSol3pin   PA12
 #define relayPin      PA15
 #define dimmerPin     PA1
 #define steamPin      PC15
@@ -17,7 +22,7 @@
 #if defined(SINGLE_BOARD)
 #define waterPin      PB15
 #else
-#define waterPin      PA12
+#define waterPin      PB15
 #endif
 
 #ifdef PCBV2
