@@ -19,11 +19,53 @@ static inline void pinInit(void) {
   #ifdef steamBoilerRelayPin
   pinMode(steamBoilerRelayPin, OUTPUT);
   #endif
-  pinMode(brewPin,  INPUT_PULLUP);
+  pinMode(cup1DtcPin,  INPUT_PULLUP);
+  pinMode(cup2DtcPin,  INPUT_PULLUP);
+  pinMode(cup2PressPin,  INPUT_PULLUP); //Necessary to avoid floating
+  digitalWrite(cup2PressPin, HIGH);     //Necessary to avoid floating
+  pinMode(cup2PressPin,  OUTPUT);
+  pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
+  pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
   pinMode(steamPin, INPUT_PULLUP);
   #ifdef waterPin
   pinMode(waterPin, INPUT_PULLUP);
   #endif
+}
+
+static inline bool cup1BtnState(void) {
+  return digitalRead(cup1DtcPin) == LOW;
+}
+
+static inline bool cup2BtnState(void) {
+  return digitalRead(cup2DtcPin) == LOW;
+}
+
+static inline void pressCup2Btn(void) {
+  digitalWrite(cup2PressPin, LOW); 
+}
+
+static inline void releaseCup2Btn(void) {
+  digitalWrite(cup2PressPin, HIGH); 
+}
+
+static inline void setSol2On(void) {
+  digitalWrite(sol2Pin, LOW); 
+}
+
+static inline void setSol2Off(void) {
+  digitalWrite(sol2Pin, HIGH); 
+}
+
+static inline void setSol3On(void) {
+  digitalWrite(sol3Pin, LOW); 
+}
+
+static inline void setSol3Off(void) {
+  digitalWrite(sol3Pin, HIGH); 
+}
+
+static inline bool brevSol3State(void) {
+  return digitalRead(brevSol3pin) == LOW; 
 }
 
 // Actuating the heater element
@@ -59,11 +101,7 @@ static inline void setSteamBoilerRelayOff(void) {
   #endif
 }
 
-//Function to get the state of the brew switch button
-//returns true or false based on the read P(power) value
-static inline bool brewState(void) {
-  return digitalRead(brewPin) == LOW; // pin will be low when switch is ON.
-}
+
 
 // Returns HIGH when switch is OFF and LOW when ON
 // pin will be high when switch is ON.
@@ -82,7 +120,7 @@ static inline bool waterPinState(void) {
 static inline void openValve(void) {
   #if defined LEGO_VALVE_RELAY
     digitalWrite(valvePin, LOW);
-  #else
+      #else
     digitalWrite(valvePin, HIGH);
   #endif
 }
@@ -90,7 +128,7 @@ static inline void openValve(void) {
 static inline void closeValve(void) {
   #if defined LEGO_VALVE_RELAY
     digitalWrite(valvePin, HIGH);
-  #else
+      #else
     digitalWrite(valvePin, LOW);
   #endif
 }
