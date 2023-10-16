@@ -783,7 +783,7 @@ static void profiling(void) {
       delay(20);
       closeValve();
       if ((millis() - brewingTimer) < 58000){
-        pressCup2Btn()
+        pressCup2Btn();
       }
       else{
         brewActive = false;
