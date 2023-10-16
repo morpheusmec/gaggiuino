@@ -118,6 +118,7 @@ void loop(void) {
   lcdListen();
   sensorsRead();
   brewDetect();
+  relaysActuate();
   modeSelect();
   lcdRefresh();
   espCommsSendSensorData(currentState);
@@ -200,6 +201,32 @@ static void sensorsReadTemperature(void) {
     currentState.temperature = thermocoupleRead() - runningCfg.offsetTemp;
     thermoTimer = millis() + GET_KTYPE_READ_EVERY;
   }
+}
+
+static void relaysActuate(void) {
+  static bool relWasNeeded = (brewActive || flushActive);
+  static unsigned int shotEndTimer = -100000;
+  bool relNeeded = (brewActive || flushActive);
+
+  if (relNeeded && !relWasNeeded){
+    setSol2Off();
+    setSol3On();
+    openValve();
+    delay(50);
+    if (flushActive) setPumpFullOn(); //ugly, move it out from here
+  }
+  else if (!relNeeded && relWasNeeded){
+    shotEndTimer = millis();
+    setPumpOff();
+  }
+
+  if (!relNeeded){
+    ((millis() - shotEndTimer > 60) && (millis() - shotEndTimer < 45000)) ? setSol2On() : setSol2Off();
+    if (millis() - shotEndTimer > 150) setSol3Off();
+    if (millis() - shotEndTimer > 20) closeValve();
+  }
+
+  relWasNeeded = relNeeded;
 }
 
 static void sensorsReadWeight(void) {
