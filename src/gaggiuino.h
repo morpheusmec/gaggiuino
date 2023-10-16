@@ -79,6 +79,7 @@ Measurements weightMeasurements(4);
 
 // brew detection vars
 bool brewActive = false;
+bool flushActive = false;
 bool nonBrewModeActive = false;
 
 //PP&PI variables

@@ -718,7 +718,7 @@ static void profiling(void) {
       openValve();
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
-  } else {
+  } else if (!flushActive){
     setPumpOff();
     closeValve();
   }
@@ -837,7 +837,7 @@ static inline void sysHealthCheck(float pressureThreshold) {
   #if defined LEGO_VALVE_RELAY || defined SINGLE_BOARD
 
   // No point going through the whole thing if this first condition isn't met.
-  if (currentState.brewSwitchState || currentState.steamSwitchState || currentState.hotWaterSwitchState) {
+  if (currentState.brewSwitchState || currentState.steamSwitchState || currentState.hotWaterSwitchState || flushActive) {
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
     return;
   }
