@@ -12,9 +12,9 @@
 #define cup1DtcPin    PA4
 #define cup2DtcPin    PC14
 #define cup2PressPin  PB1
-#define sol2Pin       PB3
-#define sol3Pin       PB5
-#define brevSol3pin   PA12
+#define sol2Pin       PA12
+#define sol3Pin       PB3
+#define brevSol3pin   PB5
 #define relayPin      PA15
 #define dimmerPin     PA1
 #define steamPin      PC15
