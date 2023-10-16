@@ -48,6 +48,12 @@ void setup(void) {
   closeValve();
   LOG_INFO("Valve closed");
 
+  // Button and solenoids
+  releaseCup2Btn();
+  setSol2Off();
+  setSol3Off();
+  LOG_INFO("Relays turned off");
+  
   lcdInit();
   LOG_INFO("LCD Init");
 
