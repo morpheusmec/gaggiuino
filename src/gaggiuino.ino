@@ -780,8 +780,14 @@ static void profiling(void) {
 
     if (phaseProfiler.isFinished()) {
       setPumpOff();
+      delay(20);
       closeValve();
-      brewActive = false;
+      if ((millis() - brewingTimer) < 58000){
+        pressCup2Btn()
+      }
+      else{
+        brewActive = false;
+      }
     } else if (currentPhase.getType() == PHASE_TYPE::PHASE_TYPE_PRESSURE) {
       float newBarValue = currentPhase.getTarget();
       float flowRestriction =  currentPhase.getRestriction();
@@ -793,9 +799,11 @@ static void profiling(void) {
       openValve();
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
-  } else if (!flushActive){
+  } else if (flushActive){
+    setPumpFullOn();
+  }
+  else{
     setPumpOff();
-    closeValve();
   }
   // Keep that water at temp
   justDoCoffee(runningCfg, currentState, brewActive);
