@@ -142,9 +142,57 @@ static void sensorsRead(void) {
 }
 
 static void sensorReadSwitches(void) {
-  currentState.brewSwitchState = brewState();
-  currentState.steamSwitchState = steamState();
-  currentState.hotWaterSwitchState = waterPinState() || (currentState.brewSwitchState && currentState.steamSwitchState); // use either an actual switch, or the GC/GCP switch combo
+  static unsigned long cup1_last_time = 0;
+  static bool cup1_last_reading = false;
+  static bool cup1_last_state = false;
+  bool cup1_press = false;
+  bool cup1_reading = cup1BtnState();
+  
+  if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
+  cup1_last_reading = cup1_reading;
+  if ((millis() - cup1_last_time) >= 50){
+    if(cup1_last_state != cup1_reading){
+      if (cup1_reading) cup1_press = true;
+    cup1_last_state = cup1_reading;
+    }
+  }
+
+  static unsigned long cup2_last_time = 0;
+  static bool cup2_last_reading = false;
+  static bool cup2_last_state = false;
+  bool cup2_press = false;
+  bool cup2_reading = cup2BtnState();
+  
+  currentState.brewSwitchState = brewActive;
+  if (cup2_reading != cup2_last_reading) cup2_last_time = millis();
+  cup2_last_reading = cup2_reading;
+  if ((millis() - cup2_last_time) >= 50){
+    if(cup2_last_state != cup2_reading){
+      if (cup2_reading){
+        cup2_press = true;
+      }
+    cup2_last_state = cup2_reading;
+    }
+  }
+
+  if (cup1_press || cup2_press){
+    releaseCup2Btn();
+    if (currentState.brewSwitchState || flushActive) {
+      currentState.brewSwitchState = false;
+      flushActive = false;
+    } 
+    else{
+      if (cup1_press){
+        flushActive = true;
+      }
+      else{
+        currentState.brewSwitchState = true;
+      }
+    } 
+  }
+
+  // currentState.steamSwitchState = steamState();
+  // currentState.hotWaterSwitchState = waterPinState() || (currentState.brewSwitchState && currentState.steamSwitchState); // use either an actual switch, or the GC/GCP switch combo
 }
 
 static void sensorsReadTemperature(void) {
