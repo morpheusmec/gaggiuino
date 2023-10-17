@@ -151,7 +151,7 @@ static void sensorReadSwitches(void) {
   
   if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
   cup1_last_reading = cup1_reading;
-  if ((millis() - cup1_last_time) >= 50){
+  if ((millis() - cup1_last_time) >= 5){
     if(cup1_last_state != cup1_reading){
       if (cup1_reading) cup1_press = true;
     cup1_last_state = cup1_reading;
@@ -167,7 +167,7 @@ static void sensorReadSwitches(void) {
   currentState.brewSwitchState = brewActive;
   if (cup2_reading != cup2_last_reading) cup2_last_time = millis();
   cup2_last_reading = cup2_reading;
-  if ((millis() - cup2_last_time) >= 50){
+  if ((millis() - cup2_last_time) >= 5){
     if(cup2_last_state != cup2_reading){
       if (cup2_reading){
         cup2_press = true;
@@ -212,7 +212,7 @@ static void relaysActuate(void) {
     setSol2Off();
     setSol3On();
     openValve();
-    delay(50);
+    delay(100);
     if (flushActive) setPumpFullOn(); //ugly, move it out from here
   }
   else if (!relNeeded && relWasNeeded){
