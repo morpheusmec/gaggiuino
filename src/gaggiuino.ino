@@ -148,26 +148,26 @@ static void sensorReadSwitches(void) {
   static bool cup1_last_state = false;
   bool cup1_press = false;
   bool cup1_reading = cup1BtnState();
-  
-  if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
-  cup1_last_reading = cup1_reading;
-  if ((millis() - cup1_last_time) >= 5){
-    if(cup1_last_state != cup1_reading){
-      if (cup1_reading) cup1_press = true;
-    cup1_last_state = cup1_reading;
-    }
-  }
-
   static unsigned long cup2_last_time = 0;
   static bool cup2_last_reading = false;
   static bool cup2_last_state = false;
   bool cup2_press = false;
   bool cup2_reading = cup2BtnState();
+  static bool press_after_release = false;
+  
+  if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
+  cup1_last_reading = cup1_reading;
+  if ((millis() - cup1_last_time) >= 50){
+    if(cup1_last_state != cup1_reading){
+      if (cup1_reading) cup1_press = true;
+    cup1_last_state = cup1_reading;
+    }
+  }
   
   currentState.brewSwitchState = brewActive;
   if (cup2_reading != cup2_last_reading) cup2_last_time = millis();
   cup2_last_reading = cup2_reading;
-  if ((millis() - cup2_last_time) >= 5){
+  if ((millis() - cup2_last_time) >= 50){
     if(cup2_last_state != cup2_reading){
       if (cup2_reading){
         cup2_press = true;
@@ -181,6 +181,7 @@ static void sensorReadSwitches(void) {
     if (currentState.brewSwitchState || flushActive) {
       currentState.brewSwitchState = false;
       flushActive = false;
+      if ((millis() - brewingTimer) > 61000) press_after_release = true; //!brevSol3State()
     } 
     else{
       if (cup1_press){
@@ -190,6 +191,14 @@ static void sensorReadSwitches(void) {
         currentState.brewSwitchState = true;
       }
     } 
+  }
+  if (press_after_release && !cup1_press && !cup2_press){
+    delay(50);
+    pressCup2Btn();
+    delay(50);
+    releaseCup2Btn();
+    delay(50);
+    press_after_release = false;
   }
 
   // currentState.steamSwitchState = steamState();
@@ -782,7 +791,7 @@ static void profiling(void) {
       setPumpOff();
       delay(20);
       closeValve();
-      if ((millis() - brewingTimer) < 58000){
+      if ((millis() - brewingTimer) < 58000) {//brevSol3State()
         pressCup2Btn();
       }
       else{

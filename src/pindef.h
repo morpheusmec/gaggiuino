@@ -12,7 +12,7 @@
 #define cup1DtcPin    PA4
 #define cup2DtcPin    PC14
 #define cup2PressPin  PB1
-#define sol2Pin       PA12
+#define sol2Pin       PB8
 #define sol3Pin       PB3
 #define brevSol3pin   PB5
 #define relayPin      PA15
@@ -32,7 +32,7 @@
 #endif
 
 #define HX711_sck_1   PB0
-#define HX711_dout_1  PB8
+#define HX711_dout_1  PB10
 #define HX711_dout_2  PB9
 
 #define USART_LCD     Serial2 // PA2(TX) & PA3(RX)
