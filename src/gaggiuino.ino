@@ -157,7 +157,7 @@ static void sensorReadSwitches(void) {
   
   if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
   cup1_last_reading = cup1_reading;
-  if ((millis() - cup1_last_time) >= 50){
+  if ((millis() - cup1_last_time) >= 1){
     if(cup1_last_state != cup1_reading){
       if (cup1_reading) cup1_press = true;
     cup1_last_state = cup1_reading;
@@ -167,7 +167,7 @@ static void sensorReadSwitches(void) {
   currentState.brewSwitchState = brewActive;
   if (cup2_reading != cup2_last_reading) cup2_last_time = millis();
   cup2_last_reading = cup2_reading;
-  if ((millis() - cup2_last_time) >= 50){
+  if ((millis() - cup2_last_time) >= 1){
     if(cup2_last_state != cup2_reading){
       if (cup2_reading){
         cup2_press = true;
@@ -180,10 +180,11 @@ static void sensorReadSwitches(void) {
     releaseCup2Btn();
     if (currentState.brewSwitchState || flushActive) {
       currentState.brewSwitchState = false;
+      brewActive = false;
       flushActive = false;
-      if ((millis() - brewingTimer) > 61000) press_after_release = true; //!brevSol3State()
+      if (brevSol3State()) press_after_release = true; //(millis() - brewingTimer) > 61000
     } 
-    else{
+    else if (!brevSol3State()){
       if (cup1_press){
         flushActive = true;
       }
@@ -442,7 +443,7 @@ static void lcdRefresh(void) {
     float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
     // float liveTempWithOffset = currentState.temperature - runningCfg.offsetTemp;
     currentState.waterTemperature = (currentState.temperature > (float)ACTIVE_PROFILE(runningCfg).setpoint && currentState.brewSwitchState)
-      ? currentState.temperature / (float)brewTempSetPoint + (float)ACTIVE_PROFILE(runningCfg).setpoint
+      ? currentState.temperature /// (float)brewTempSetPoint + (float)ACTIVE_PROFILE(runningCfg).setpoint
       : currentState.temperature;
 
     lcdSetTemperature(std::floor((uint16_t)currentState.waterTemperature));
@@ -825,7 +826,7 @@ static void manualFlowControl(void) {
     setPumpFlow(flow_reading, 0.f, currentState);
   } else {
     setPumpOff();
-    closeValve();
+    // closeValve();
   }
   justDoCoffee(runningCfg, currentState, brewActive);
 }

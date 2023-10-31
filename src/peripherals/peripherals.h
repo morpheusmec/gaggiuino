@@ -26,6 +26,7 @@ static inline void pinInit(void) {
   pinMode(cup2PressPin,  OUTPUT);
   pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
   pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
+  pinMode(brevSol3pin, INPUT_PULLUP);
   pinMode(steamPin, INPUT_PULLUP);
   #ifdef waterPin
   pinMode(waterPin, INPUT_PULLUP);
