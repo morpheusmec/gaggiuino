@@ -35,15 +35,15 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
       }
     }
   } else { //if brewState == false
-    if (sensorTemperature <= ((float)brewTempSetPoint - 10.f)) {
+    if (sensorTemperature <= ((float)brewTempSetPoint - 15.f)) {
       setBoilerOn();
     } else {
-      int HPWR_LOW = runningCfg.hpwr / runningCfg.mainDivider;
+      int HPWR_LOW =(int)((float)runningCfg.hpwr / ((float)runningCfg.mainDivider / 10.f));
       // Calculating the boiler heating power range based on the below input values
-      int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 10, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
+      int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 15, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
       HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
 
-      if (sensorTemperature <= ((float)brewTempSetPoint - 5.f)) {
+      if (sensorTemperature <= ((float)brewTempSetPoint - 10.f)) {
         pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
       } else if (sensorTemperature < ((float)brewTempSetPoint)) {
         pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
