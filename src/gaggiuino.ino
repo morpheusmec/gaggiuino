@@ -816,7 +816,7 @@ static void profiling(void) {
     setPumpOff();
   }
   // Keep that water at temp
-  justDoCoffee(runningCfg, currentState, brewActive);
+  justDoCoffee(runningCfg, currentState, brewActive || flushActive);
 }
 
 static void manualFlowControl(void) {

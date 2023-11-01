@@ -96,8 +96,8 @@ namespace {
     defaultData.steamSetPoint = 155;
     defaultData.offsetTemp = 7;
     defaultData.hpwr = 550;
-    defaultData.mainDivider = 5;
-    defaultData.brewDivider = 3;
+    defaultData.mainDivider = 50;
+    defaultData.brewDivider = 30;
     defaultData.powerLineFrequency = 50;
     defaultData.lcdSleep = 16;
     defaultData.warmupState = false;
