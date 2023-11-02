@@ -187,6 +187,7 @@ static void sensorReadSwitches(void) {
     else if (!brevSol3State()){
       if (cup1_press){
         flushActive = true;
+        brewParamsReset();
       }
       else{
         currentState.brewSwitchState = true;
@@ -792,7 +793,7 @@ static void profiling(void) {
       setPumpOff();
       delay(20);
       closeValve();
-      if ((millis() - brewingTimer) < 58000) {//brevSol3State()
+      if (brevSol3State()) {//(millis() - brewingTimer) < 58000
         pressCup2Btn();
       }
       else{
@@ -816,7 +817,11 @@ static void profiling(void) {
     setPumpOff();
   }
   // Keep that water at temp
-  justDoCoffee(runningCfg, currentState, brewActive);
+  if (millis() - brewingTimer < 1000 * 60 * 40){ //safety if machine is forgotten on
+    justDoCoffee(runningCfg, currentState, brewActive);
+  } else {
+    setBoilerOff();
+  }
 }
 
 static void manualFlowControl(void) {
