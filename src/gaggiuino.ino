@@ -398,7 +398,7 @@ static void modeSelect(void) {
       nonBrewModeActive = true;
       if (!currentState.steamSwitchState) steamTime = millis();
       backFlush(currentState);
-      brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState, false);
+      brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState, false, false);
       break;
     case OPERATION_MODES::OPMODE_steam:
       nonBrewModeActive = true;
@@ -818,7 +818,7 @@ static void profiling(void) {
   }
   // Keep that water at temp
   if (millis() - brewingTimer < 1000 * 60 * 40){ //safety if machine is forgotten on
-    justDoCoffee(runningCfg, currentState, brewActive);
+    justDoCoffee(runningCfg, currentState, brewActive, flushActive);
   } else {
     setBoilerOff();
   }
@@ -833,7 +833,7 @@ static void manualFlowControl(void) {
     setPumpOff();
     // closeValve();
   }
-  justDoCoffee(runningCfg, currentState, brewActive);
+  justDoCoffee(runningCfg, currentState, brewActive, flushActive);
 }
 
 //#############################################################################################
@@ -953,7 +953,7 @@ static inline void sysHealthCheck(float pressureThreshold) {
           lcdRefresh();
           lcdListen();
           sensorsRead();
-          justDoCoffee(runningCfg, currentState, brewActive);
+          justDoCoffee(runningCfg, currentState, brewActive, flushActive);
           break;
         default:
           sensorsRead();

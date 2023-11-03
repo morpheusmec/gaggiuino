@@ -13,7 +13,7 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   );
 }
 
-void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState, const bool brewActive) {
+void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState, const bool brewActive, const bool flushActive) {
   lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
   float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
   float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
@@ -34,6 +34,8 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
         setBoilerOff();
       }
     }
+  } else if (flushActive){
+    (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
   } else { //if brewState == false
     if (sensorTemperature <= ((float)brewTempSetPoint - 15.f)) {
       setBoilerOn();
