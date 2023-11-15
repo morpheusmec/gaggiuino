@@ -29,7 +29,8 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
         deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
       }
       if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
-        pulseHeaters(runningCfg.hpwr, (float)runningCfg.mainDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+        // pulseHeaters(runningCfg.hpwr, (float)runningCfg.mainDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+        setHeatersPower(runningCfg.hpwr, (float)runningCfg.brewDivider / 100.f);
       } else {
         setBoilerOff();
       }
@@ -37,18 +38,20 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
   } else if (flushActive){
     (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
   } else { //if brewState == false
-    if (sensorTemperature <= ((float)brewTempSetPoint - 15.f)) {
+    if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
       setBoilerOn();
     } else {
-      int HPWR_LOW =(int)((float)runningCfg.hpwr / ((float)runningCfg.mainDivider / 10.f));
+      // int HPWR_LOW =(int)((float)runningCfg.hpwr / ((float)runningCfg.mainDivider / 10.f));
       // Calculating the boiler heating power range based on the below input values
-      int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 15, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
-      HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
+      // int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 15, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
+      // HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
 
       if (sensorTemperature <= ((float)brewTempSetPoint - 10.f)) {
-        pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
+        // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
+        setHeatersPower(runningCfg.hpwr, (1.f + (float)runningCfg.mainDivider / 100.f) / 2.f);
       } else if (sensorTemperature < ((float)brewTempSetPoint)) {
-        pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+        // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+        setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
       } else {
         setBoilerOff();
       }
@@ -69,6 +72,20 @@ void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float 
     heaterWave=millis();
   } else if (heaterState && ((millis() - heaterWave) > (pulseLength / factor_2))) {
     brewActive ? setBoilerOn() : setBoilerOff();
+    heaterState=!heaterState;
+    heaterWave=millis();
+  }
+}
+
+void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
+  static uint32_t heaterWave;
+  static bool heaterState;
+  if (!heaterState && ((millis() - heaterWave) > (cicleLength * powerFactor))) {
+    setBoilerOff();
+    heaterState=!heaterState;
+    heaterWave=millis();
+  } else if (heaterState && ((millis() - heaterWave) > (cicleLength * (1 - powerFactor)))) {
+    setBoilerOn();
     heaterState=!heaterState;
     heaterWave=millis();
   }
