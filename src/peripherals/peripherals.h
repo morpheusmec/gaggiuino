@@ -21,12 +21,8 @@ static inline void pinInit(void) {
   #endif
   pinMode(cup1DtcPin,  INPUT_PULLUP);
   pinMode(cup2DtcPin,  INPUT_PULLUP);
-  pinMode(cup2PressPin,  INPUT_PULLUP); //Necessary to avoid floating
-  digitalWrite(cup2PressPin, HIGH);     //Necessary to avoid floating
-  pinMode(cup2PressPin,  OUTPUT);
   pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
   pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
-  pinMode(brevSol3pin, INPUT_PULLUP);
   pinMode(steamPin, INPUT_PULLUP);
   #ifdef waterPin
   pinMode(waterPin, INPUT_PULLUP);
@@ -39,14 +35,6 @@ static inline bool cup1BtnState(void) {
 
 static inline bool cup2BtnState(void) {
   return digitalRead(cup2DtcPin) == LOW;
-}
-
-static inline void pressCup2Btn(void) {
-  digitalWrite(cup2PressPin, LOW); 
-}
-
-static inline void releaseCup2Btn(void) {
-  digitalWrite(cup2PressPin, HIGH); 
 }
 
 static inline void setSol2On(void) {
@@ -63,10 +51,6 @@ static inline void setSol3On(void) {
 
 static inline void setSol3Off(void) {
   digitalWrite(sol3Pin, HIGH); 
-}
-
-static inline bool brevSol3State(void) {
-  return digitalRead(brevSol3pin) == LOW; 
 }
 
 // Actuating the heater element
