@@ -11,10 +11,8 @@
 #define zcPin         PA0
 #define cup1DtcPin    PA4
 #define cup2DtcPin    PC14
-#define cup2PressPin  PB1
-#define sol2Pin       PB8
+#define sol2Pin       PB5
 #define sol3Pin       PB3
-#define brevSol3pin   PB5
 #define relayPin      PA15
 #define dimmerPin     PA1
 #define steamPin      PC15
@@ -22,7 +20,7 @@
 #if defined(SINGLE_BOARD)
 #define waterPin      PB15
 #else
-#define waterPin      PB15
+#define waterPin      PB1
 #endif
 
 #ifdef PCBV2
