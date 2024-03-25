@@ -11,7 +11,7 @@
 
 
 const uint32_t STEAM_TIMEOUT = 900000UL; // steam mode timeout
-const float MAX_WATER_TEMP = 105.f; // max temp allowed in hot water mode
+const float MAX_WATER_TEMP = 95.f; // max temp allowed in hot water mode
 const float steamThreshold_ = 11.f; // max allowed pressure before heaters are disabled
 const float activeSteamPressure_ = 2.f; // DreamSteam enabling threshold.
 const float passiveSteamPressure_ = 3.f; // DreamSteam disabling threshold.
@@ -22,11 +22,11 @@ enum class HEATING {
   MODE_hotWater
 };
 
-void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState, const bool brewActive, const bool flushActive);
+void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState);
 void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float factor_2, const bool brewActive);
 void setHeatersPower(const uint32_t cicleLength, const float powerFactor);
 void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState);
-void hotWaterMode(const SensorState &currentState);
+void hotWaterMode(SensorState &currentState);
 
 #endif
 

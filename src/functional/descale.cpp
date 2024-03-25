@@ -71,7 +71,7 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
       }
       break;
   }
-  justDoCoffee(runningCfg, currentState, false, false);
+  justDoCoffee(runningCfg, currentState);
 }
 
 void solenoidBeat() {

@@ -4,9 +4,14 @@
 
 struct SensorState {
   bool brewSwitchState;
+  bool flushSwitchState;
   bool steamSwitchState;
   bool hotWaterSwitchState;
   bool isSteamForgottenON;
+  bool brewActive;
+  bool flushActive;
+  bool steamActive;
+  bool hotWaterActive;
   bool scalesPresent;
   bool tarePending;
   float temperature;          // °C

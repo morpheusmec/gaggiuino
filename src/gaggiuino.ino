@@ -49,7 +49,6 @@ void setup(void) {
   LOG_INFO("Valve closed");
 
   // Button and solenoids
-  releaseCup2Btn();
   setSol2Off();
   setSol3Off();
   LOG_INFO("Relays turned off");
@@ -117,7 +116,7 @@ void loop(void) {
   if (lcdCurrentPageId != lcdLastCurrentPageId) pageValuesRefresh();
   lcdListen();
   sensorsRead();
-  brewDetect();
+  modeDetect();
   relaysActuate();
   modeSelect();
   lcdRefresh();
@@ -142,51 +141,54 @@ static void sensorsRead(void) {
   doLed();
 }
 
+static bool cup1_read_switch(void){
+  static unsigned long last_time = 0;
+  static bool last_reading = false;
+  static bool last_state = false;
+  bool press = false;
+  bool reading = cup1BtnState();
+  
+  if (reading != last_reading) last_time = millis();
+  last_reading = reading;
+  if ((millis() - last_time) >= 1){
+    if(last_state != reading){
+      if (reading) press = true;
+    last_state = reading;
+    }
+  }
+  return press;
+}
+
+static bool cup2_read_switch(void){
+  static unsigned long last_time = 0;
+  static bool last_reading = false;
+  static bool last_state = false;
+  bool press = false;
+  bool reading = cup2BtnState();
+  
+  if (reading != last_reading) last_time = millis();
+  last_reading = reading;
+  if ((millis() - last_time) >= 1){
+    if(last_state != reading){
+      if (reading) press = true;
+    last_state = reading;
+    }
+  }
+  return press;
+}
+
 static void sensorReadSwitches(void) {
-  static unsigned long cup1_last_time = 0;
-  static bool cup1_last_reading = false;
-  static bool cup1_last_state = false;
-  bool cup1_press = false;
-  bool cup1_reading = cup1BtnState();
-  static unsigned long cup2_last_time = 0;
-  static bool cup2_last_reading = false;
-  static bool cup2_last_state = false;
-  bool cup2_press = false;
-  bool cup2_reading = cup2BtnState();
-  static bool press_after_release = false;
-  
-  if (cup1_reading != cup1_last_reading) cup1_last_time = millis();
-  cup1_last_reading = cup1_reading;
-  if ((millis() - cup1_last_time) >= 1){
-    if(cup1_last_state != cup1_reading){
-      if (cup1_reading) cup1_press = true;
-    cup1_last_state = cup1_reading;
-    }
-  }
-  
-  currentState.brewSwitchState = brewActive;
-  if (cup2_reading != cup2_last_reading) cup2_last_time = millis();
-  cup2_last_reading = cup2_reading;
-  if ((millis() - cup2_last_time) >= 1){
-    if(cup2_last_state != cup2_reading){
-      if (cup2_reading){
-        cup2_press = true;
-      }
-    cup2_last_state = cup2_reading;
-    }
-  }
+  bool cup1_press = cup1_read_switch();
+  bool cup2_press = cup2_read_switch();
 
   if (cup1_press || cup2_press){
-    releaseCup2Btn();
-    if (currentState.brewSwitchState || flushActive) {
+    if (currentState.brewSwitchState || currentState.flushSwitchState) {
       currentState.brewSwitchState = false;
-      brewActive = false;
-      flushActive = false;
-      if (brevSol3State()) press_after_release = true; //(millis() - brewingTimer) > 61000
+      currentState.flushSwitchState = false;
     } 
-    else if (!brevSol3State()){
+    else{
       if (cup1_press){
-        flushActive = true;
+        currentState.flushSwitchState = true;
         brewParamsReset();
       }
       else{
@@ -194,17 +196,9 @@ static void sensorReadSwitches(void) {
       }
     } 
   }
-  if (press_after_release && !cup1_press && !cup2_press){
-    delay(50);
-    pressCup2Btn();
-    delay(50);
-    releaseCup2Btn();
-    delay(50);
-    press_after_release = false;
-  }
 
-  // currentState.steamSwitchState = steamState();
-  // currentState.hotWaterSwitchState = waterPinState() || (currentState.brewSwitchState && currentState.steamSwitchState); // use either an actual switch, or the GC/GCP switch combo
+  currentState.steamSwitchState = steamState();
+  currentState.hotWaterSwitchState = waterPinState();
 }
 
 static void sensorsReadTemperature(void) {
@@ -215,16 +209,15 @@ static void sensorsReadTemperature(void) {
 }
 
 static void relaysActuate(void) {
-  static bool relWasNeeded = (brewActive || flushActive);
+  static bool relWasNeeded = (currentState.brewActive || currentState.flushActive);
   static unsigned int shotEndTimer = -100000;
-  bool relNeeded = (brewActive || flushActive);
+  bool relNeeded = (currentState.brewActive || currentState.flushActive);
 
   if (relNeeded && !relWasNeeded){
     setSol2Off();
     setSol3On();
     openValve();
     delay(100);
-    if (flushActive) setPumpFullOn(); //ugly, move it out from here
   }
   else if (!relNeeded && relWasNeeded){
     shotEndTimer = millis();
@@ -257,7 +250,7 @@ static void sensorsReadWeight(void) {
       }
       currentState.weight = weightMeasurements.latest().value;
 
-      if (brewActive) {
+      if (currentState.brewActive) {
         currentState.shotWeight = currentState.tarePending ? 0.f : currentState.weight;
         currentState.weightFlow = fmax(0.f, weightMeasurements.measurementChange().changeSpeed());
         currentState.smoothedWeightFlow = smoothScalesFlow.updateEstimate(currentState.weightFlow);
@@ -296,7 +289,7 @@ static long sensorsReadFlow(float elapsedTimeSec) {
 static void calculateWeightAndFlow(void) {
   uint32_t elapsedTime = millis() - flowTimer;
 
-  if (brewActive) {
+  if (currentState.brewActive) {
     // Marking for tare in case smth has gone wrong and it has exited tare already.
     if (currentState.weight < -.3f) currentState.tarePending = true;
 
@@ -381,38 +374,29 @@ static void modeSelect(void) {
     case OPERATION_MODES::OPMODE_FlowBasedPreinfusionPressureBasedProfiling:
     case OPERATION_MODES::OPMODE_everythingFlowProfiled:
     case OPERATION_MODES::OPMODE_pressureBasedPreinfusionAndFlowProfile:
-      nonBrewModeActive = false;
-      if (currentState.hotWaterSwitchState) hotWaterMode(currentState);
-      else if (currentState.steamSwitchState) steamCtrl(runningCfg, currentState);
+      if (currentState.hotWaterActive) hotWaterMode(currentState);
+      else if (currentState.steamActive) steamCtrl(runningCfg, currentState);
       else {
         profiling();
         steamTime = millis();
       }
       break;
     case OPERATION_MODES::OPMODE_manual:
-      nonBrewModeActive = false;
-      if (!currentState.steamSwitchState) steamTime = millis();
       manualFlowControl();
       break;
     case OPERATION_MODES::OPMODE_flush:
-      nonBrewModeActive = true;
-      if (!currentState.steamSwitchState) steamTime = millis();
       backFlush(currentState);
-      brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState, false, false);
+      currentState.brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState);
       break;
     case OPERATION_MODES::OPMODE_steam:
-      nonBrewModeActive = true;
       steamCtrl(runningCfg, currentState);
 
-      if (!currentState.steamSwitchState) {
-        brewActive ? flushActivated() : flushDeactivated();
+      if (!currentState.steamActive) {
         steamCtrl(runningCfg, currentState);
         pageValuesRefresh();
       }
       break;
     case OPERATION_MODES::OPMODE_descale:
-      nonBrewModeActive = true;
-      if (!currentState.steamSwitchState) steamTime = millis();
       deScale(runningCfg, currentState);
       break;
     default:
@@ -479,7 +463,7 @@ static void lcdRefresh(void) {
   #endif
 
     /*LCD timer and warmup*/
-    if (brewActive) {
+    if (currentState.brewActive) {
       lcdSetBrewTimer((millis() > brewingTimer) ? (int)((millis() - brewingTimer) / 1000) : 0);
       lcdBrewTimerStart(); // nextion timer start
       lcdWarmupStateStop(); // Flagging warmup notification on Nextion needs to stop (if enabled)
@@ -782,7 +766,7 @@ void onProfileReceived(Profile& newProfile) {
 }
 
 static void profiling(void) {
-  if (brewActive) { //runs this only when brew button activated and pressure profile selected
+  if (currentState.brewActive) { //runs this only when brew button activated and pressure profile selected
     uint32_t timeInShot = millis() - brewingTimer;
     phaseProfiler.updatePhase(timeInShot, currentState);
     CurrentPhase& currentPhase = phaseProfiler.getCurrentPhase();
@@ -791,14 +775,7 @@ static void profiling(void) {
 
     if (phaseProfiler.isFinished()) {
       setPumpOff();
-      delay(20);
-      closeValve();
-      if (brevSol3State()) {//(millis() - brewingTimer) < 58000
-        pressCup2Btn();
-      }
-      else{
-        brewActive = false;
-      }
+      currentState.brewSwitchState = false;
     } else if (currentPhase.getType() == PHASE_TYPE::PHASE_TYPE_PRESSURE) {
       float newBarValue = currentPhase.getTarget();
       float flowRestriction =  currentPhase.getRestriction();
@@ -810,22 +787,22 @@ static void profiling(void) {
       openValve();
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
-  } else if (flushActive){
-    setPumpFullOn();
+  } else if (currentState.flushActive){
+    setPumpToRawValue(50);
   }
-  else{
+  else if (!currentState.steamActive && !currentState.hotWaterActive){
     setPumpOff();
   }
   // Keep that water at temp
-  if (millis() - brewingTimer < 1000 * 60 * 40){ //safety if machine is forgotten on
-    justDoCoffee(runningCfg, currentState, brewActive, flushActive);
+  if (millis() - iddleTimer < 1000 * 60 * 90){ //safety if machine is forgotten on
+    justDoCoffee(runningCfg, currentState);
   } else {
     setBoilerOff();
   }
 }
 
 static void manualFlowControl(void) {
-  if (brewActive) {
+  if (currentState.brewActive) {
     openValve();
     float flow_reading = lcdGetManualFlowVol() / 10.f ;
     setPumpFlow(flow_reading, 0.f, currentState);
@@ -833,32 +810,60 @@ static void manualFlowControl(void) {
     setPumpOff();
     // closeValve();
   }
-  justDoCoffee(runningCfg, currentState, brewActive, flushActive);
+  justDoCoffee(runningCfg, currentState);
 }
 
 //#############################################################################################
 //###################################____BREW DETECT____#######################################
 //#############################################################################################
 
-static void brewDetect(void) {
+static void modeDetect(void) {
   // Do not allow brew detection while system reports not ready.
   if (!sysReadinessCheck()) {
     return;
   }
+  currentState.hotWaterActive = currentState.hotWaterSwitchState;
+
+  if (currentState.steamSwitchState){
+    currentState.brewActive = false;
+    currentState.flushActive = false;
+    currentState.hotWaterActive = false;
+    currentState.steamActive = true;
+  } else if (currentState.hotWaterSwitchState){
+    currentState.brewActive = false;
+    currentState.flushActive = false;
+    currentState.hotWaterActive = true;
+    currentState.steamActive = false;
+  } else if (!currentState.steamActive && !currentState.hotWaterActive){
+    if (currentState.brewSwitchState){
+      currentState.brewActive = true;
+      currentState.flushActive = false;
+    } else if (currentState.flushSwitchState){
+      currentState.brewActive = false;
+      currentState.flushActive = true;
+    } else {
+      currentState.brewActive = false;
+      currentState.flushActive = false;
+    }
+  }
+
+  if (currentState.brewActive || currentState.flushActive || currentState.steamActive || currentState.hotWaterActive){
+    iddleTimer = millis();
+    lcdWakeUp();
+  }
+   
+  if (!currentState.steamActive) steamTime = millis();
 
   static bool paramsReset = true;
-  if (currentState.brewSwitchState) {
+  if (currentState.brewActive) {
     if (!paramsReset) {
-      lcdWakeUp();
       brewParamsReset();
       paramsReset = true;
-      brewActive = true;
     }
     // needs to be here as it creates a locking state soemtimes if not kept up to date during brew
     // mainly when shotWeight restriction kick in.
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
   } else {
-    brewActive = false;
     currentState.pumpClicks = getAndResetClickCounter();
     if (paramsReset) {
       brewParamsReset();
@@ -914,7 +919,7 @@ static inline void sysHealthCheck(float pressureThreshold) {
     setSteamBoilerRelayOff();
     if (millis() > thermoTimer) {
       LOG_ERROR("Cannot read temp from thermocouple (last read: %.1lf)!", static_cast<double>(currentState.temperature));
-      currentState.steamSwitchState ? lcdShowPopup("COOLDOWN") : lcdShowPopup("TEMP READ ERROR"); // writing a LCD message
+      currentState.steamActive ? lcdShowPopup("COOLDOWN") : lcdShowPopup("TEMP READ ERROR"); // writing a LCD message
       currentState.temperature  = thermocoupleRead() - runningCfg.offsetTemp;  // Making sure we're getting a value
       thermoTimer = millis() + GET_KTYPE_READ_EVERY;
     }
@@ -928,14 +933,14 @@ static inline void sysHealthCheck(float pressureThreshold) {
     setPumpOff();
     setBoilerOff();
     setSteamBoilerRelayOff();
-    currentState.isSteamForgottenON = currentState.steamSwitchState;
+    currentState.isSteamForgottenON = currentState.steamActive;
   }
 
   //Releasing the excess pressure after steaming or brewing if necessary
   #if defined LEGO_VALVE_RELAY || defined SINGLE_BOARD
 
   // No point going through the whole thing if this first condition isn't met.
-  if (currentState.brewSwitchState || currentState.steamSwitchState || currentState.hotWaterSwitchState || flushActive) {
+  if (currentState.brewSwitchState || currentState.steamActive || currentState.hotWaterSwitchState || currentState.flushActive) {
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
     return;
   }
@@ -949,20 +954,20 @@ static inline void sysHealthCheck(float pressureThreshold) {
         case NextionPage::BrewManual:
         case NextionPage::BrewGraph:
         case NextionPage::GraphPreview:
-          brewDetect();
+          modeDetect();
           lcdRefresh();
           lcdListen();
           sensorsRead();
-          justDoCoffee(runningCfg, currentState, brewActive, flushActive);
+          justDoCoffee(runningCfg, currentState);
           break;
         default:
           sensorsRead();
-          lcdShowPopup("Releasing pressure!");
-          setPumpOff();
-          setBoilerOff();
-          setSteamValveRelayOff();
-          setSteamBoilerRelayOff();
-          openValve();
+          // lcdShowPopup("Releasing pressure!");
+          // setPumpOff();
+          // setBoilerOff();
+          // setSteamValveRelayOff();
+          // setSteamBoilerRelayOff();
+          // openValve();
           break;
       }
     }
@@ -973,16 +978,16 @@ static inline void sysHealthCheck(float pressureThreshold) {
   if (lcdCurrentPageId == NextionPage::BrewGraph) return;
   if (lcdCurrentPageId == NextionPage::BrewManual) return;
 
-  if (currentState.smoothedPressure >= pressureThreshold && currentState.temperature < 100.f) {
-    if (millis() >= systemHealthTimer - 3500ul && millis() <= systemHealthTimer - 500ul) {
-      char tmp[25];
-      int countdown = (int)(systemHealthTimer-millis())/1000;
-      unsigned int check = snprintf(tmp, sizeof(tmp), "Dropping beats in: %i", countdown);
-      if (check > 0 && check <= sizeof(tmp)) {
-        lcdShowPopup(tmp);
-      }
-    }
-  }
+  // if (currentState.smoothedPressure >= pressureThreshold && currentState.temperature < 100.f) {
+  //   if (millis() >= systemHealthTimer - 3500ul && millis() <= systemHealthTimer - 500ul) {
+  //     char tmp[25];
+  //     int countdown = (int)(systemHealthTimer-millis())/1000;
+  //     unsigned int check = snprintf(tmp, sizeof(tmp), "Dropping beats in: %i", countdown);
+  //     if (check > 0 && check <= sizeof(tmp)) {
+  //       lcdShowPopup(tmp);
+  //     }
+  //   }
+  // }
   #endif
 }
 
@@ -1071,7 +1076,7 @@ static void cpsInit(eepromValues_t &eepromValues) {
 }
 
 static void doLed(void) {
-  if (runningCfg.ledDisco && brewActive) {
+  if (runningCfg.ledDisco && currentState.brewActive) {
     switch(lcdCurrentPageId) {
       case NextionPage::BrewGraph:
       case NextionPage::BrewManual:

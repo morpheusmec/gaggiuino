@@ -13,12 +13,12 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   );
 }
 
-void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState, const bool brewActive, const bool flushActive) {
+void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState) {
   lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
   float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
   float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
 
-  if (brewActive) { //if brewState == true
+  if (currentState.brewActive) { //if brewState == true
     if(sensorTemperature <= brewTempSetPoint - 5.f) {
       setBoilerOn();
     } else {
@@ -35,9 +35,9 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
         setBoilerOff();
       }
     }
-  } else if (flushActive){
+  } else if (currentState.flushActive){
     (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
-  } else { //if brewState == false
+  } else if (!currentState.steamActive && !currentState.hotWaterActive){ //if brewState == false
     if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
       setBoilerOn();
     } else {
@@ -45,10 +45,11 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
       // Calculating the boiler heating power range based on the below input values
       // int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 15, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
       // HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
-
-      if (sensorTemperature <= ((float)brewTempSetPoint - 10.f)) {
+      if (sensorTemperature <= ((float)brewTempSetPoint - 35.f)) {
+        setHeatersPower(runningCfg.hpwr, 1.f);
+      } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
         // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
-        setHeatersPower(runningCfg.hpwr, (1.f + (float)runningCfg.mainDivider / 100.f) / 2.f);
+        setHeatersPower(runningCfg.hpwr, 0.6f);
       } else if (sensorTemperature < ((float)brewTempSetPoint)) {
         // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
         setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
@@ -57,10 +58,7 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
       }
     }
   }
-  if (brewActive || !currentState.brewSwitchState) { // keep steam boiler supply valve open while steaming/descale only
-    setSteamValveRelayOff();
-  }
-  setSteamBoilerRelayOff();
+
 }
 
 void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float factor_2, const bool brewActive) {
@@ -80,11 +78,12 @@ void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float 
 void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
   static uint32_t heaterWave;
   static bool heaterState;
-  if (!heaterState && ((millis() - heaterWave) > (cicleLength * powerFactor))) {
+  const float power = constrain(powerFactor, 0.f, 1.f);
+  if (!heaterState && ((millis() - heaterWave) > (cicleLength * power))) {
     setBoilerOff();
     heaterState=!heaterState;
     heaterWave=millis();
-  } else if (heaterState && ((millis() - heaterWave) > (cicleLength * (1 - powerFactor)))) {
+  } else if (heaterState && ((millis() - heaterWave) > (cicleLength * (1 - power)))) {
     setBoilerOn();
     heaterState=!heaterState;
     heaterWave=millis();
@@ -95,31 +94,50 @@ void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
 //################################____STEAM_POWER_CONTROL____##################################
 //#############################################################################################
 void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
-  currentState.steamSwitchState ? lcdTargetState((int)HEATING::MODE_steam) : lcdTargetState((int)HEATING::MODE_brew); // setting the steam/hot water target temp
+  currentState.steamActive ? lcdTargetState((int)HEATING::MODE_steam) : lcdTargetState((int)HEATING::MODE_brew); // setting the steam/hot water target temp
   // steam temp control, needs to be aggressive to keep steam pressure acceptable
   float steamTempSetPoint = runningCfg.steamSetPoint + runningCfg.offsetTemp;
   float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
+  static bool readyToSteam = false;
+  static bool flushingStarted = false;
+  static int flushStartTime;
+  static double flushingDeltaT = 0;
 
-  if (currentState.smoothedPressure > steamThreshold_ || sensorTemperature > steamTempSetPoint) {
+  if (sensorTemperature > steamTempSetPoint) readyToSteam = true;
+
+  if (sensorTemperature > steamTempSetPoint + 5.f) {
     setBoilerOff();
-    setSteamBoilerRelayOff();
-    setSteamValveRelayOff();
-    setPumpOff();
+  } else if (sensorTemperature > steamTempSetPoint){
+      (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.7f) : setBoilerOff();
+  }else if (!flushingStarted) {
+    setBoilerOn();
   } else {
-    if (sensorTemperature < steamTempSetPoint) {
-      setBoilerOn();
-    } else {
-      setBoilerOff();
+    setBoilerOff();
+  }
+
+  readyToSteam && currentState.steamSwitchState ? setPumpToRawValue(5): setPumpOff();
+
+  if (!flushingStarted && !currentState.steamSwitchState && (currentState.brewSwitchState || currentState.flushSwitchState)){
+    flushingStarted = true;
+    flushStartTime = millis();
+    flushingDeltaT = fmax(0, currentState.temperature - ACTIVE_PROFILE(runningCfg).setpoint);
+    currentState.brewSwitchState = false;
+    currentState.flushSwitchState = false;
+
+  } else{
+    currentState.brewSwitchState = false;
+    currentState.flushSwitchState = false;
+  }
+
+  if (flushingStarted){
+    if (millis() - flushStartTime < (long) (200. * flushingDeltaT)){
+      setPumpFullOn();
+    }else{
+      setPumpOff();
+      currentState.steamActive = false;
+      readyToSteam = false;
+      flushingStarted = false;
     }
-    setSteamValveRelayOn();
-    setSteamBoilerRelayOn();
-    #ifndef DREAM_STEAM_DISABLED // disabled for bigger boilers which have no  need of adding water during steaming
-      if (currentState.smoothedPressure < activeSteamPressure_) {
-        setPumpToRawValue(3);
-      } else {
-        setPumpOff();
-      }
-    #endif
   }
 
   /*In case steam is forgotten ON for more than 15 min*/
@@ -129,10 +147,11 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
 }
 
 /*Water mode and all that*/
-void hotWaterMode(const SensorState &currentState) {
-  closeValve();
-  setPumpToRawValue(80);
+void hotWaterMode(SensorState &currentState) {
+  setPumpToRawValue(100);
   setBoilerOn();
   if (currentState.temperature < MAX_WATER_TEMP) setBoilerOn();
   else setBoilerOff();
+  currentState.brewSwitchState = false;
+  currentState.flushSwitchState = false;
 }
