@@ -6,6 +6,7 @@
 #include "sensors_state.h"
 
 #define ZC_MODE    FALLING
+#define between(x,a,b) ( b>a ? (x>=a)&&(x<=b) : (x>=b)&&(x<=a))
 
 constexpr uint8_t PUMP_RANGE = 100;
 
@@ -19,7 +20,7 @@ int getCPS(void);
 void pumpPhaseShift(void);
 void pumpStopAfter(const uint8_t val);
 float getPumpFlow(const float cps, const float pressure);
-float getPumpFlowPerClick(const float pressure);
+// float getPumpFlowPerClick(const float pressure);
 float getClicksPerSecondForFlow(const float flow, const float pressure);
 void setPumpFlow(const float targetFlow, const float pressureRestriction, const SensorState &currentState);
 #endif

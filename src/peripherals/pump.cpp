@@ -10,16 +10,77 @@ PSM pump(zcPin, dimmerPin, PUMP_RANGE, ZC_MODE, 1, 6);
 float flowPerClickAtZeroBar = 0.27f;
 int maxPumpClicksPerSecond = 50;
 float fpc_multiplier = 1.2f;
-//https://www.desmos.com/calculator/axyl70gjae  - blue curve
-constexpr std::array<float, 7> pressureInefficiencyCoefficient {{
-  0.045f,
-  0.015f,
-  0.0033f,
-  0.000685f,
-  0.000045f,
-  0.009f,
-  -0.0018f
-}};
+
+int currentPumpValue = 0;
+
+float Pn [] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+float Cn [] = {0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60};
+const int Pcount = sizeof(Pn) / sizeof(Pn[0]);
+const int Ccount = sizeof(Cn) / sizeof(Cn[0]);
+float Qn[Pcount][Ccount] ={{0.0, 1.98, 3.957468077, 5.621748317, 7.113337769, 8.15506186, 8.28, 8.467274426, 9.009558884, 9.72, 10.35678733},
+{0.0, 1.414302547, 2.828605093, 4.24290764, 5.657210187, 6.794637946, 7.2, 7.547331427, 8.003389206, 8.532, 9},
+{0.0, 1.096489127, 2.192978253, 3.28946738, 4.385956507, 5.482445633, 5.931764231, 6.354830192, 6.572796735, 7.08973876, 7.450071324},
+{0.0, 0.938077189, 1.876154377, 2.814231566, 3.752308754, 4.690385943, 4.968, 5.25, 5.424, 5.562, 5.76},
+{0.0, 0.826197524, 1.652395048, 2.478592572, 3.304790096, 4.130987621, 4.32, 4.536, 4.656, 4.782464597, 4.98},
+{0.0, 0.750731751, 1.501463501, 2.252195252, 3.002927002, 3.753658753, 3.937885471, 4.266847265, 4.298653178, 4.483667461, 4.627357952},
+{0.0, 0.680162406, 1.360324811, 2.040487217, 2.720649622, 3.400812028, 3.614205802, 3.98465104, 4.071534267, 4.292819842, 4.401846895},
+{0.0, 0.620054338, 1.240108677, 1.860163015, 2.480217353, 3.100271692, 3.369935137, 3.706572187, 3.936211621, 4.14958613, 4.366461768},
+{0.0, 0.562298769, 1.124597539, 1.686896308, 2.249195078, 2.811493847, 3.103312565, 3.385263715, 3.609799528, 3.88206949, 4.213647473},
+{0.0, 0.518753877, 1.037507754, 1.556261631, 2.075015508, 2.487750902, 2.782095282, 3.063783556, 3.210024353, 3.551030649, 3.918667235},
+{0.0, 0.468635964, 0.937271929, 1.405907893, 1.874543857, 2.166076682, 2.413046573, 2.646927159, 2.8159419, 3.167575743, 3.406268171},
+{0.0, 0.409012982, 0.818025965, 1.227038947, 1.636051929, 1.80523259, 2.000891124, 2.176912962, 2.386858793, 2.572562468, 2.826179682},
+{0.0, 0.324468943, 0.648937885, 0.973406828, 1.29787577, 1.35121257, 1.512037636, 1.609255108, 1.68, 1.8792, 2.054568162}};
+
+// Function that returns the flow rate in g/s given pressure in bar and cps
+float findQ(float p, float c)
+{
+  int ip, ic;
+  float fpc1, fpc2;
+
+  p = constrain(p, Pn[0], Pn[Pcount - 1]);
+  for (int i = 0; i < Pcount - 1 ; i++){
+    if (between(p, Pn[i], Pn[i + 1])) {
+      ip = i;
+      break;
+    }
+  }
+  c = constrain(c, Cn[0], Cn[Ccount - 1]);
+  for (int i = 0; i < Ccount - 1 ; i++){
+    if (between(c, Cn[i], Cn[i + 1])) {
+      ic = i;
+      break;
+    }
+  }
+  fpc1 = ((Pn[ip + 1] - p) / (Pn[ip + 1] - Pn[ip])) * Qn[ip][ic] + ((p - Pn[ip]) / (Pn[ip + 1] - Pn[ip])) * Qn[ip + 1][ic];
+  fpc2 = ((Pn[ip + 1] - p) / (Pn[ip + 1] - Pn[ip])) * Qn[ip][ic + 1] + ((p - Pn[ip]) / (Pn[ip + 1] - Pn[ip])) * Qn[ip + 1][ic + 1];
+  return ((Cn[ic + 1] - c) / (Cn[ic + 1] - Cn[ic])) * fpc1 + ((c - Cn[ic]) / (Cn[ic + 1] - Cn[ic])) * fpc2;
+}
+
+// Function that returns the cps, given pressure in bar and flow rate in g/s
+float findC(float p, float q)
+{
+  int ip, ic;
+  float Qp[Ccount], fraction;
+  p = constrain(p, Pn[0], Pn[Pcount - 1]);
+  for (int i = 0; i < Pcount - 1 ; i++){
+    if (between(p, Pn[i], Pn[i + 1])){
+      ip = i;
+      break;
+    }
+  }
+  fraction = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
+  for (int i = 0; i < Ccount; i++){
+    Qp[i] = Qn[ip + 1][i] * fraction + Qn[ip][i] * (1 - fraction);
+  }
+  q = constrain(q, Qp[0], Qp[Ccount - 1]);
+  for (int i = 0; i < Ccount - 1 ; i++){
+    if (between(q, Qp[i], Qp[i + 1])){
+      ic = i;
+      break;
+    }
+  }
+  return Cn[ic] + (Cn[ic + 1] - Cn[ic]) * (q - Qp[ic]) / (Qp[ic + 1] - Qp[ic]);
+}
 
 // Initialising some pump specific specs, mainly:
 // - max pump clicks(dependant on region power grid spec)
@@ -68,14 +129,17 @@ void setPumpPressure(const float targetPressure, const float flowRestriction, co
 
 void setPumpOff(void) {
   pump.set(0);
+  currentPumpValue = 0;
 }
 
 void setPumpFullOn(void) {
   pump.set(PUMP_RANGE);
+  currentPumpValue = PUMP_RANGE;
 }
 
 void setPumpToRawValue(const uint8_t val) {
   pump.set(val);
+  currentPumpValue = val;
 }
 
 void pumpStopAfter(const uint8_t val) {
@@ -108,22 +172,19 @@ void pumpPhaseShift(void) {
 
 // Models the flow per click, follows a compromise between the schematic and recorded findings
 // plotted: https://www.desmos.com/calculator/eqynzclagu
-float getPumpFlowPerClick(const float pressure) {
-  float fpc = 0.f;
-  fpc = (pressureInefficiencyCoefficient[5] / pressure + pressureInefficiencyCoefficient[6]) * ( -pressure * pressure ) + ( flowPerClickAtZeroBar - pressureInefficiencyCoefficient[0]) - (pressureInefficiencyCoefficient[1] + (pressureInefficiencyCoefficient[2] - (pressureInefficiencyCoefficient[3] - pressureInefficiencyCoefficient[4] * pressure) * pressure) * pressure) * pressure;
-  return fpc * fpc_multiplier;
-}
+// float getPumpFlowPerClick(const float pressure) {
+//   return findQ(pressure, (float)currentPumpValue / (float)PUMP_RANGE * (float)maxPumpClicksPerSecond);
+// }
 
 // Follows the schematic from https://www.cemegroup.com/solenoid-pump/e5-60 modified to per-click
 float getPumpFlow(const float cps, const float pressure) {
-  return cps * getPumpFlowPerClick(pressure);
+  return findQ(pressure, cps);
 }
 
 // Currently there is no compensation for pressure measured at the puck, resulting in incorrect estimates
 float getClicksPerSecondForFlow(const float flow, const float pressure) {
   if (flow == 0.f) return 0;
-  float flowPerClick = getPumpFlowPerClick(pressure);
-  float cps = flow / flowPerClick;
+  float cps = findC(pressure, flow);
   return fminf(cps, (float)maxPumpClicksPerSecond);
 }
 

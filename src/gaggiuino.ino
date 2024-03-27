@@ -5,7 +5,7 @@
 #endif
 #include "gaggiuino.h"
 
-SimpleKalmanFilter smoothPressure(0.6f, 0.6f, 0.1f);
+SimpleKalmanFilter smoothPressure(0.15f, 0.15f, 0.2f);
 SimpleKalmanFilter smoothPumpFlow(0.1f, 0.1f, 0.01f);
 SimpleKalmanFilter smoothScalesFlow(0.5f, 0.5f, 0.01f);
 SimpleKalmanFilter smoothConsideredFlow(0.1f, 0.1f, 0.1f);
@@ -304,8 +304,8 @@ static void calculateWeightAndFlow(void) {
 
       // Start the predictive weight calculations when conditions are true
       if (predictiveWeight.isOutputFlow() || currentState.weight > 0.4f) {
-        float flowPerClick = getPumpFlowPerClick(currentState.smoothedPressure);
-        float actualFlow = (consideredFlow > pumpClicks * flowPerClick) ? consideredFlow : pumpClicks * flowPerClick;
+        float flowrate = getPumpFlow((float) pumpClicks / elapsedTimeSec, currentState.smoothedPressure);
+        float actualFlow = (consideredFlow > flowrate * elapsedTimeSec) ? consideredFlow : flowrate * elapsedTimeSec;
         /* Probabilistically the flow is lower if the shot is just started winding up and we're flow profiling,
         once pressure stabilises around the setpoint the flow is either stable or puck restriction is high af. */
         if ((ACTIVE_PROFILE(runningCfg).mfProfileState || ACTIVE_PROFILE(runningCfg).tpType) && currentState.pressureChangeSpeed > 0.15f) {
