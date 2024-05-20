@@ -34,52 +34,41 @@ float Qn[Pcount][Ccount] ={{0.0, 1.98, 3.957468077, 5.621748317, 7.113337769, 8.
 // Function that returns the flow rate in g/s given pressure in bar and cps
 float findQ(float p, float c)
 {
-  int ip, ic;
-  float fpc1, fpc2;
+  int ip = 0, ic = 0;
+  float fpc1, fpc2, fractionp, fractionc;
 
   p = constrain(p, Pn[0], Pn[Pcount - 1]);
-  for (int i = 0; i < Pcount - 1 ; i++){
-    if (between(p, Pn[i], Pn[i + 1])) {
-      ip = i;
-      break;
-    }
-  }
+  while (!between(p, Pn[ip], Pn[ip + 1])) ip++;
+  fractionp = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
+
   c = constrain(c, Cn[0], Cn[Ccount - 1]);
-  for (int i = 0; i < Ccount - 1 ; i++){
-    if (between(c, Cn[i], Cn[i + 1])) {
-      ic = i;
-      break;
-    }
-  }
-  fpc1 = ((Pn[ip + 1] - p) / (Pn[ip + 1] - Pn[ip])) * Qn[ip][ic] + ((p - Pn[ip]) / (Pn[ip + 1] - Pn[ip])) * Qn[ip + 1][ic];
-  fpc2 = ((Pn[ip + 1] - p) / (Pn[ip + 1] - Pn[ip])) * Qn[ip][ic + 1] + ((p - Pn[ip]) / (Pn[ip + 1] - Pn[ip])) * Qn[ip + 1][ic + 1];
-  return ((Cn[ic + 1] - c) / (Cn[ic + 1] - Cn[ic])) * fpc1 + ((c - Cn[ic]) / (Cn[ic + 1] - Cn[ic])) * fpc2;
+  while (!between(c, Cn[ic], Cn[ic + 1])) ic++;
+  fractionc = (c - Cn[ic]) / (Cn[ic + 1] - Cn[ic]);
+
+  fpc1 = Qn[ip][ic] + (Qn[ip + 1][ic] - Qn[ip][ic]) * fractionp;
+  fpc2 = Qn[ip][ic + 1] + (Qn[ip + 1][ic + 1] - Qn[ip][ic + 1]) * fractionp;
+  return fpc1 + (fpc2 - fpc1) * fractionc;
 }
 
 // Function that returns the cps, given pressure in bar and flow rate in g/s
 float findC(float p, float q)
 {
-  int ip, ic;
-  float Qp[Ccount], fraction;
+  int ip = 0, ic = 0;
+  float Qp[Ccount], fractionp, fractionc;
+
   p = constrain(p, Pn[0], Pn[Pcount - 1]);
-  for (int i = 0; i < Pcount - 1 ; i++){
-    if (between(p, Pn[i], Pn[i + 1])){
-      ip = i;
-      break;
-    }
-  }
-  fraction = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
+  while (!between(p, Pn[ip], Pn[ip + 1])) ip++;
+  fractionp = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
+
   for (int i = 0; i < Ccount; i++){
-    Qp[i] = Qn[ip + 1][i] * fraction + Qn[ip][i] * (1 - fraction);
+    Qp[i] = Qn[ip][i] + (Qn[ip + 1][i] - Qn[ip][i]) * fractionp;
   }
+
   q = constrain(q, Qp[0], Qp[Ccount - 1]);
-  for (int i = 0; i < Ccount - 1 ; i++){
-    if (between(q, Qp[i], Qp[i + 1])){
-      ic = i;
-      break;
-    }
-  }
-  return Cn[ic] + (Cn[ic + 1] - Cn[ic]) * (q - Qp[ic]) / (Qp[ic + 1] - Qp[ic]);
+  while (!between(q, Qp[ic], Qp[ic + 1])) ic++;
+  fractionc = (q - Qp[ic]) / (Qp[ic + 1] - Qp[ic]);
+  
+  return Cn[ic] + (Cn[ic + 1] - Cn[ic]) * fractionc;
 }
 
 // Initialising some pump specific specs, mainly:
