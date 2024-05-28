@@ -14,7 +14,7 @@ void pumpInit(const int powerLineFrequency, const float pumpFlowAtZero);
 void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState);
 void setPumpOff(void);
 void setPumpFullOn(void);
-void setPumpToRawValue(const uint8_t val);
+void setPumpToPercentage(const float percentage);
 long  getAndResetClickCounter(void);
 int getCPS(void);
 void pumpPhaseShift(void);

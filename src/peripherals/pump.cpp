@@ -113,22 +113,20 @@ inline float getPumpPct(const float targetPressure, const float flowRestriction,
 // - pressure direction
 void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState) {
   float pumpPct = getPumpPct(targetPressure, flowRestriction, currentState);
-  setPumpToRawValue((uint8_t)(pumpPct * PUMP_RANGE));
+  setPumpToPercentage(pumpPct);
 }
 
 void setPumpOff(void) {
-  pump.set(0);
-  currentPumpValue = 0;
+  setPumpToPercentage(0.0);
 }
 
 void setPumpFullOn(void) {
-  pump.set(PUMP_RANGE);
-  currentPumpValue = PUMP_RANGE;
+  setPumpToPercentage(1.0);
 }
 
-void setPumpToRawValue(const uint8_t val) {
-  pump.set(val);
-  currentPumpValue = val;
+void setPumpToPercentage(float percentage) {
+  currentPumpValue = (uint8_t) std::round(percentage * PUMP_RANGE);
+  pump.set(currentPumpValue);
 }
 
 void pumpStopAfter(const uint8_t val) {
@@ -186,6 +184,6 @@ void setPumpFlow(const float targetFlow, const float pressureRestriction, const 
   }
   else {
     float pumpPct = getClicksPerSecondForFlow(targetFlow, currentState.smoothedPressure) / (float)maxPumpClicksPerSecond;
-    setPumpToRawValue(pumpPct * PUMP_RANGE);
+    setPumpToPercentage(pumpPct);
   }
 }

@@ -25,7 +25,7 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
       break;
     case DescalingState::DESCALING_PHASE1: // Slowly penetrating that scale
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
-      setPumpToRawValue(10);
+      setPumpToPercentage(0.1);
       if (millis() - descalingTimer > DESCALE_PHASE1_EVERY) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
@@ -47,7 +47,7 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
       break;
     case DescalingState::DESCALING_PHASE3: // Fucking up that scale big time
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
-      setPumpToRawValue(30);
+      setPumpToPercentage(0.30);
       if (millis() - descalingTimer > DESCALE_PHASE3_EVERY) {
         solenoidBeat();
         lcdSetDescaleCycle(descalingCycle++);

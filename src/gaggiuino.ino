@@ -788,7 +788,7 @@ static void profiling(void) {
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
   } else if (currentState.flushActive){
-    setPumpToRawValue(50);
+    setPumpToPercentage(0.5);
   }
   else if (!currentState.steamActive && !currentState.hotWaterActive){
     setPumpOff();
@@ -1055,7 +1055,7 @@ static void fillBoilerUntilThreshod(unsigned long elapsedTime) {
 
   lcdShowPopup("Filling boiler!");
   openValve();
-  setPumpToRawValue(35);
+  setPumpToPercentage(0.35);
 }
 
 static void updateStartupTimer(void) {

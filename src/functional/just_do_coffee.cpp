@@ -115,7 +115,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
     setBoilerOff();
   }
 
-  readyToSteam && currentState.steamSwitchState ? setPumpToRawValue(5): setPumpOff();
+  readyToSteam && currentState.steamSwitchState ? setPumpToPercentage(0.05): setPumpOff();
 
   if (!flushingStarted && !currentState.steamSwitchState && (currentState.brewSwitchState || currentState.flushSwitchState)){
     flushingStarted = true;
@@ -148,7 +148,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
 
 /*Water mode and all that*/
 void hotWaterMode(SensorState &currentState) {
-  setPumpToRawValue(100);
+  setPumpToPercentage(1.0);
   setBoilerOn();
   if (currentState.temperature < MAX_WATER_TEMP) setBoilerOn();
   else setBoilerOff();
