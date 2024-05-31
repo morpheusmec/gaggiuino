@@ -14,10 +14,10 @@ float fpc_multiplier = 1.2f;
 int currentPumpValue = 0;
 
 float Pn [] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-float Cn [] = {0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60};
+float Ln [] = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.};
 const int Pcount = sizeof(Pn) / sizeof(Pn[0]);
-const int Ccount = sizeof(Cn) / sizeof(Cn[0]);
-float Qn[Pcount][Ccount] ={{0.0, 1.98, 3.957468077, 5.621748317, 7.113337769, 8.15506186, 8.28, 8.467274426, 9.009558884, 9.72, 10.35678733},
+const int Lcount = sizeof(Ln) / sizeof(Ln[0]);
+float Qn[Pcount][Lcount] ={{0.0, 1.98, 3.957468077, 5.621748317, 7.113337769, 8.15506186, 8.28, 8.467274426, 9.009558884, 9.72, 10.35678733},
 {0.0, 1.414302547, 2.828605093, 4.24290764, 5.657210187, 6.794637946, 7.2, 7.547331427, 8.003389206, 8.532, 9},
 {0.0, 1.096489127, 2.192978253, 3.28946738, 4.385956507, 5.482445633, 5.931764231, 6.354830192, 6.572796735, 7.08973876, 7.450071324},
 {0.0, 0.938077189, 1.876154377, 2.814231566, 3.752308754, 4.690385943, 4.968, 5.25, 5.424, 5.562, 5.76},
@@ -31,44 +31,47 @@ float Qn[Pcount][Ccount] ={{0.0, 1.98, 3.957468077, 5.621748317, 7.113337769, 8.
 {0.0, 0.409012982, 0.818025965, 1.227038947, 1.636051929, 1.80523259, 2.000891124, 2.176912962, 2.386858793, 2.572562468, 2.826179682},
 {0.0, 0.324468943, 0.648937885, 0.973406828, 1.29787577, 1.35121257, 1.512037636, 1.609255108, 1.68, 1.8792, 2.054568162}};
 
-// Function that returns the flow rate in g/s given pressure in bar and cps
-float findQ(float p, float c)
+// Function that returns the flow rate in g/s given pressure in bar and pump load
+float findQ(float p, float l)
 {
-  int ip = 0, ic = 0;
-  float fpc1, fpc2, fractionp, fractionc;
+  int ip = 0, il = 0;
+  float fpl1, fpl2, fractionp, fractionl, q;
 
   p = constrain(p, Pn[0], Pn[Pcount - 1]);
   while (!between(p, Pn[ip], Pn[ip + 1])) ip++;
   fractionp = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
 
-  c = constrain(c, Cn[0], Cn[Ccount - 1]);
-  while (!between(c, Cn[ic], Cn[ic + 1])) ic++;
-  fractionc = (c - Cn[ic]) / (Cn[ic + 1] - Cn[ic]);
+  l = constrain(l, Ln[0], Ln[Lcount - 1]);
+  while (!between(l, Ln[il], Ln[il + 1])) il++;
+  fractionl = (l - Ln[il]) / (Ln[il + 1] - Ln[il]);
 
-  fpc1 = Qn[ip][ic] + (Qn[ip + 1][ic] - Qn[ip][ic]) * fractionp;
-  fpc2 = Qn[ip][ic + 1] + (Qn[ip + 1][ic + 1] - Qn[ip][ic + 1]) * fractionp;
-  return fpc1 + (fpc2 - fpc1) * fractionc;
+  fpl1 = Qn[ip][il] + (Qn[ip + 1][il] - Qn[ip][il]) * fractionp;
+  fpl2 = Qn[ip][il + 1] + (Qn[ip + 1][il + 1] - Qn[ip][il + 1]) * fractionp;
+  q = fpl1 + (fpl2 - fpl1) * fractionl;
+  LOG_DEBUG(",FindQ, %f, %f, %f, %f, %d", (float) millis() / 1000., p, l, q, (float) currentPumpValue / (float) PUMP_RANGE);
+  return q;
 }
 
 // Function that returns the cps, given pressure in bar and flow rate in g/s
-float findC(float p, float q)
+float findL(float p, float q)
 {
-  int ip = 0, ic = 0;
-  float Qp[Ccount], fractionp, fractionc;
+  int ip = 0, il = 0;
+  float Qp[Lcount], fractionp, fractionl, l;
 
   p = constrain(p, Pn[0], Pn[Pcount - 1]);
   while (!between(p, Pn[ip], Pn[ip + 1])) ip++;
   fractionp = (p - Pn[ip]) / (Pn[ip + 1] - Pn[ip]);
 
-  for (int i = 0; i < Ccount; i++){
+  for (int i = 0; i < Lcount; i++){
     Qp[i] = Qn[ip][i] + (Qn[ip + 1][i] - Qn[ip][i]) * fractionp;
   }
 
-  q = constrain(q, Qp[0], Qp[Ccount - 1]);
-  while (!between(q, Qp[ic], Qp[ic + 1])) ic++;
-  fractionc = (q - Qp[ic]) / (Qp[ic + 1] - Qp[ic]);
-  
-  return Cn[ic] + (Cn[ic + 1] - Cn[ic]) * fractionc;
+  q = constrain(q, Qp[0], Qp[Lcount - 1]);
+  while (!between(q, Qp[il], Qp[il + 1])) il++;
+  fractionl = (q - Qp[il]) / (Qp[il + 1] - Qp[il]);
+  l = Ln[il] + (Ln[il + 1] - Ln[il]) * fractionl;
+  LOG_DEBUG(",FindL, %f, %f, %f, %f", (float) millis() / 1000., p, l, q);
+  return l;
 }
 
 // Initialising some pump specific specs, mainly:
@@ -88,8 +91,8 @@ inline float getPumpPct(const float targetPressure, const float flowRestriction,
   }
 
   float diff = targetPressure - currentState.smoothedPressure;
-  float maxPumpPct = flowRestriction <= 0.f ? 1.f : getClicksPerSecondForFlow(flowRestriction, currentState.smoothedPressure) / (float) maxPumpClicksPerSecond;
-  float pumpPctToMaintainFlow = getClicksPerSecondForFlow(currentState.smoothedPumpFlow, currentState.smoothedPressure) / (float) maxPumpClicksPerSecond;
+  float maxPumpPct = flowRestriction <= 0.f ? 1.f : getLoadForFlow(currentState.smoothedPressure, flowRestriction);
+  float pumpPctToMaintainFlow = getLoadForFlow(currentState.smoothedPressure, currentState.smoothedPumpFlow);
 
   if (diff > 2.f) {
     return fminf(maxPumpPct, 0.25f + 0.2f * diff);
@@ -112,6 +115,7 @@ inline float getPumpPct(const float targetPressure, const float flowRestriction,
 // - flow
 // - pressure direction
 void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState) {
+  LOG_DEBUG(",setPumpPressure, %f", (float) millis() / 1000.);
   float pumpPct = getPumpPct(targetPressure, flowRestriction, currentState);
   setPumpToPercentage(pumpPct);
 }
@@ -125,8 +129,12 @@ void setPumpFullOn(void) {
 }
 
 void setPumpToPercentage(float percentage) {
-  currentPumpValue = (uint8_t) std::round(percentage * PUMP_RANGE);
-  pump.set(currentPumpValue);
+  int newPumpValue = (uint8_t) std::round(percentage * PUMP_RANGE);
+  if (currentPumpValue != newPumpValue){
+    LOG_DEBUG(",setPumpToPercentage, %f, %f", (float) millis() / 1000., (float) newPumpValue / (float) PUMP_RANGE);
+    currentPumpValue = newPumpValue;
+    pump.set(newPumpValue);
+  }
 }
 
 void pumpStopAfter(const uint8_t val) {
@@ -163,27 +171,25 @@ void pumpPhaseShift(void) {
 //   return findQ(pressure, (float)currentPumpValue / (float)PUMP_RANGE * (float)maxPumpClicksPerSecond);
 // }
 
-// Follows the schematic from https://www.cemegroup.com/solenoid-pump/e5-60 modified to per-click
-float getPumpFlow(const float cps, const float pressure) {
-  return findQ(pressure, cps);
+float getPumpFlow(const float pressure, const float cps) {
+  return findQ(pressure, cps / (float) maxPumpClicksPerSecond);
 }
 
-// Currently there is no compensation for pressure measured at the puck, resulting in incorrect estimates
-float getClicksPerSecondForFlow(const float flow, const float pressure) {
+float getLoadForFlow(const float pressure, const float flow) {
   if (flow == 0.f) return 0;
-  float cps = findC(pressure, flow);
-  return fminf(cps, (float)maxPumpClicksPerSecond);
+  return constrain(findL(pressure, flow), 0.f, 1.f);
 }
 
 // Calculates pump percentage for the requested flow and updates the pump raw value
 void setPumpFlow(const float targetFlow, const float pressureRestriction, const SensorState &currentState) {
   // If a pressure restriction exists then the we go into pressure profile with a flowRestriction
   // which is equivalent but will achieve smoother pressure management
+  LOG_DEBUG(",setPumpFlow, %f", (float) millis() / 1000.);
   if (pressureRestriction > 0.f && currentState.smoothedPressure > pressureRestriction * 0.5f) {
     setPumpPressure(pressureRestriction, targetFlow, currentState);
   }
   else {
-    float pumpPct = getClicksPerSecondForFlow(targetFlow, currentState.smoothedPressure) / (float)maxPumpClicksPerSecond;
+    float pumpPct = getLoadForFlow(currentState.smoothedPressure, targetFlow);
     setPumpToPercentage(pumpPct);
   }
 }

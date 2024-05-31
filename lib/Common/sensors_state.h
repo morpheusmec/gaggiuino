@@ -30,7 +30,7 @@ struct SensorState {
   float smoothedPumpFlow;
   float smoothedWeightFlow;
   float consideredFlow;
-  long pumpClicks;
+  float pumpCPS;
   uint16_t waterLvl;
   bool tofReady;
 };

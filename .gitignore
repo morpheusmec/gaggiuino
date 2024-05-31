@@ -10,3 +10,4 @@ webserver/data
 gaggiuino.ino.cpp
 extra_defines.ini
 *.code-workspace
+logs/

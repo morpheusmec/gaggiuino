@@ -270,14 +270,17 @@ static void sensorsReadPressure(void) {
     currentState.smoothedPressure = smoothPressure.updateEstimate(currentState.pressure);
     currentState.pressureChangeSpeed = (currentState.smoothedPressure - previousSmoothedPressure) / elapsedTimeSec;
     pressureTimer = millis();
+    if (currentState.brewActive) {
+      LOG_DEBUG(",P, %f, %f, %f", (float) millis() / 1000., currentState.pressure, currentState.smoothedPressure);
+    }
   }
 }
 
 static long sensorsReadFlow(float elapsedTimeSec) {
   long pumpClicks = getAndResetClickCounter();
-  currentState.pumpClicks = (float) pumpClicks / elapsedTimeSec;
+  currentState.pumpCPS = (float) pumpClicks / elapsedTimeSec;
 
-  currentState.pumpFlow = getPumpFlow(currentState.pumpClicks, currentState.smoothedPressure);
+  currentState.pumpFlow = getPumpFlow(currentState.smoothedPressure, currentState.pumpCPS);
 
   previousSmoothedPumpFlow = currentState.smoothedPumpFlow;
   // Some flow smoothing
@@ -294,6 +297,7 @@ static void calculateWeightAndFlow(void) {
     if (currentState.weight < -.3f) currentState.tarePending = true;
 
     if (elapsedTime > REFRESH_FLOW_EVERY) {
+      LOG_DEBUG(",calculateWeightandFlow, %f", (float) millis() / 1000.);
       flowTimer = millis();
       float elapsedTimeSec = elapsedTime / 1000.f;
       long pumpClicks = sensorsReadFlow(elapsedTimeSec);
@@ -304,7 +308,7 @@ static void calculateWeightAndFlow(void) {
 
       // Start the predictive weight calculations when conditions are true
       if (predictiveWeight.isOutputFlow() || currentState.weight > 0.4f) {
-        float flowrate = getPumpFlow((float) pumpClicks / elapsedTimeSec, currentState.smoothedPressure);
+        float flowrate = getPumpFlow(currentState.smoothedPressure, (float) pumpClicks / elapsedTimeSec);
         float actualFlow = (consideredFlow > flowrate * elapsedTimeSec) ? consideredFlow : flowrate * elapsedTimeSec;
         /* Probabilistically the flow is lower if the shot is just started winding up and we're flow profiling,
         once pressure stabilises around the setpoint the flow is either stable or puck restriction is high af. */
@@ -321,7 +325,7 @@ static void calculateWeightAndFlow(void) {
     }
   } else {
     currentState.consideredFlow = 0.f;
-    currentState.pumpClicks = getAndResetClickCounter();
+    currentState.pumpCPS = getAndResetClickCounter();
     flowTimer = millis();
   }
 }
@@ -864,7 +868,7 @@ static void modeDetect(void) {
     // mainly when shotWeight restriction kick in.
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
   } else {
-    currentState.pumpClicks = getAndResetClickCounter();
+    currentState.pumpCPS = getAndResetClickCounter();
     if (paramsReset) {
       brewParamsReset();
       paramsReset = false;
