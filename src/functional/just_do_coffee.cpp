@@ -38,24 +38,16 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
   } else if (currentState.flushActive){
     (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
   } else if (!currentState.steamActive && !currentState.hotWaterActive){ //if brewState == false
-    if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
-      setBoilerOn();
+    if (sensorTemperature <= ((float)brewTempSetPoint - 35.f)) {
+      setHeatersPower(runningCfg.hpwr, 1.f);
+    } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
+      // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
+      setHeatersPower(runningCfg.hpwr, 0.6f);
+    } else if (sensorTemperature < ((float)brewTempSetPoint)) {
+      // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+      setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
     } else {
-      // int HPWR_LOW =(int)((float)runningCfg.hpwr / ((float)runningCfg.mainDivider / 10.f));
-      // Calculating the boiler heating power range based on the below input values
-      // int HPWR_OUT = mapRange(sensorTemperature, brewTempSetPoint - 15, brewTempSetPoint, runningCfg.hpwr, HPWR_LOW, 0);
-      // HPWR_OUT = constrain(HPWR_OUT, HPWR_LOW, runningCfg.hpwr);  // limits range of sensor values to HPWR_LOW and HPWR
-      if (sensorTemperature <= ((float)brewTempSetPoint - 35.f)) {
-        setHeatersPower(runningCfg.hpwr, 1.f);
-      } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
-        // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
-        setHeatersPower(runningCfg.hpwr, 0.6f);
-      } else if (sensorTemperature < ((float)brewTempSetPoint)) {
-        // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
-        setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
-      } else {
-        setBoilerOff();
-      }
+      setBoilerOff();
     }
   }
 
@@ -105,17 +97,13 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
 
   if (sensorTemperature > steamTempSetPoint) readyToSteam = true;
 
-  if (sensorTemperature > steamTempSetPoint + 5.f) {
+  if (sensorTemperature > steamTempSetPoint + 5.f || flushingStarted) {
     setBoilerOff();
   } else if (sensorTemperature > steamTempSetPoint){
       (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.7f) : setBoilerOff();
-  }else if (!flushingStarted) {
-    setBoilerOn();
   } else {
-    setBoilerOff();
+    setBoilerOn();
   }
-
-  readyToSteam && currentState.steamSwitchState ? setPumpToPercentage(0.05): setPumpOff();
 
   if (!flushingStarted && !currentState.steamSwitchState && (currentState.brewSwitchState || currentState.flushSwitchState)){
     flushingStarted = true;
@@ -138,6 +126,8 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
       readyToSteam = false;
       flushingStarted = false;
     }
+  }else{
+    readyToSteam && currentState.steamSwitchState ? setPumpToPercentage(0.05): setPumpOff();
   }
 
   /*In case steam is forgotten ON for more than 15 min*/
