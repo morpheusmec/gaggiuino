@@ -30,7 +30,7 @@
 #endif
 
 #define HX711_sck_1   PB0
-#define HX711_dout_1  PB10
+#define HX711_dout_1  PB8
 #define HX711_dout_2  PB9
 
 #define USART_LCD     Serial2 // PA2(TX) & PA3(RX)

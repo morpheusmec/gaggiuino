@@ -3,12 +3,12 @@
 #include "pindef.h"
 #include "remote_scales.h"
 
-#include <HX711_2.h>
+#include <HX711.h>
 namespace {
   class LoadCellSingleton {
   public:
-    static HX711_2& getInstance() {
-      static HX711_2 instance(TIM3);
+    static HX711& getInstance() {
+      static HX711 instance(TIM3);
       return instance;
     }
   private:
@@ -34,13 +34,15 @@ void scalesInit(float scalesF1, float scalesF2) {
 
 #ifndef DISABLE_HW_SCALES
   auto& loadCells = LoadCellSingleton::getInstance();
-  loadCells.begin(HX711_dout_1, HX711_dout_2, HX711_sck_1, 128U, scale_clk);
-  loadCells.set_scale(scalesF1, scalesF2);
+  loadCells.begin(HX711_dout_1, HX711_sck_1, 128U, scale_clk);
+  pinMode(HX711_dout_1, INPUT_PULLUP);
+  loadCells.set_scale(scalesF1);
   loadCells.power_up();
 
   if (loadCells.wait_ready_timeout(1000, 10)) {
     loadCells.tare(4);
     hwScalesPresent = true;
+    
   }
   else {
     loadCells.power_down();
@@ -69,9 +71,7 @@ Measurement scalesGetWeight(void) {
   if (hwScalesPresent) {
     auto& loadCells = LoadCellSingleton::getInstance();
     if (loadCells.wait_ready_timeout(150, 10)) {
-      float values[2];
-      loadCells.get_units(values);
-      currentWeight = Measurement{ .value=values[0] + values[1], .millis=millis() };
+      currentWeight = Measurement{ .value=loadCells.get_units(), .millis=millis() };
     }
   }
   else if (remoteScalesIsPresent()) {
@@ -85,13 +85,13 @@ bool scalesIsPresent(void) {
   if (FORCE_PREDICTIVE_SCALES) {
     return false;
   }
-  return hwScalesPresent || remoteScalesIsPresent();
+  return hwScalesPresent;// || remoteScalesIsPresent();
 }
 
 float scalesDripTrayWeight() {
-  long value[2] = {};
+  long value = 0L;
   if (hwScalesPresent) {
-    LoadCellSingleton::getInstance().read_average(value, 4);
+    value = LoadCellSingleton::getInstance().read_average(4);
   }
-  return ((float)value[0] + (float)value[1]);
+  return (value);
 }
