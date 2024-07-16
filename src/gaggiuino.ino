@@ -117,7 +117,7 @@ void loop(void) {
   lcdListen();
   sensorsRead();
   modeDetect();
-  relaysActuate();
+  if (selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale) relaysActuate();
   modeSelect();
   lcdRefresh();
   espCommsSendSensorData(currentState);
@@ -389,7 +389,7 @@ static void modeSelect(void) {
       break;
     case OPERATION_MODES::OPMODE_flush:
       backFlush(currentState);
-      currentState.brewActive ? setBoilerOff() : justDoCoffee(runningCfg, currentState);
+      justDoCoffee(runningCfg, currentState);
       break;
     case OPERATION_MODES::OPMODE_steam:
       steamCtrl(runningCfg, currentState);
@@ -820,29 +820,22 @@ static void modeDetect(void) {
   if (!sysReadinessCheck()) {
     return;
   }
-  currentState.hotWaterActive = currentState.hotWaterSwitchState;
 
-  if (currentState.steamSwitchState){
-    currentState.brewActive = false;
-    currentState.flushActive = false;
-    currentState.hotWaterActive = false;
+  currentState.brewActive = false;
+  currentState.flushActive = false;
+  currentState.hotWaterActive = false;
+
+  if (currentState.steamSwitchState && selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale){
     currentState.steamActive = true;
-  } else if (currentState.hotWaterSwitchState){
-    currentState.brewActive = false;
-    currentState.flushActive = false;
+  } else if (currentState.hotWaterSwitchState && selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale){
     currentState.hotWaterActive = true;
     currentState.steamActive = false;
   } else if (!currentState.steamActive && !currentState.hotWaterActive){
     if (currentState.brewSwitchState){
       currentState.brewActive = true;
-      currentState.flushActive = false;
     } else if (currentState.flushSwitchState){
-      currentState.brewActive = false;
       currentState.flushActive = true;
-    } else {
-      currentState.brewActive = false;
-      currentState.flushActive = false;
-    }
+    } 
   }
 
   if (currentState.brewActive || currentState.flushActive || currentState.steamActive || currentState.hotWaterActive){

@@ -93,56 +93,52 @@ void solenoidBeat() {
   setPumpOff();
 }
 
-void backFlush(const SensorState &currentState) {
-  static unsigned long backflushTimer = millis();
-  unsigned long elapsedTime = millis() - backflushTimer;
+void backFlush(SensorState &currentState) {
   if (currentState.brewSwitchState) {
-    if (flushCounter >= 11) {
+    if (flushCounter >= 2 * BACK_FLUSH_CYCLES ) {
       flushDeactivated();
+      currentState.brewSwitchState = false;
       return;
     }
-    else if (elapsedTime > 7000UL && currentState.smoothedPressure > 5.f) {
+    else {
+      setSol3On();
       flushPhases();
-    } else flushActivated();
+    } 
   } else {
     flushDeactivated();
     flushCounter = 0;
-    backflushTimer = millis();
   }
 }
 
-
 void flushActivated(void) {
-  #if defined SINGLE_BOARD || defined LEGO_VALVE_RELAY
-      openValve();
-  #endif
-  setPumpFullOn();
+  setSol3On();
+  setSol2Off();
+  setPumpToPercentage(0.5f);
 }
 
 void flushDeactivated(void) {
-  #if defined SINGLE_BOARD || defined LEGO_VALVE_RELAY
-      closeValve();
-  #endif
+  setSol2Off();
+  setSol3Off();
   setPumpOff();
 }
 
 void flushPhases(void) {
   static long timer = millis();
-  if (flushCounter <= 10) {
-    if (flushCounter % 2) {
-      if (millis() - timer >= 5000) {
+  if (flushCounter < 2 * BACK_FLUSH_CYCLES) {
+    if (flushCounter % 2 == 0) {
+      if (millis() - timer >= 15000) {
         flushCounter++;
         timer = millis();
       }
-      openValve();
-      setPumpFullOn();
+      setSol2Off();
+      setPumpToPercentage(0.5f);
     } else {
-      if (millis() - timer >= 5000) {
+      if (millis() - timer >= 15000) {
         flushCounter++;
         timer = millis();
       }
-      closeValve();
-      setPumpOff();
+      setSol2On();
+      ((flushCounter == 2 * BACK_FLUSH_CYCLES - 1) && (millis() - timer > 5000) && (millis() - timer < 10000)) ? setPumpToPercentage(0.5) : setPumpOff();
     }
   } else {
     flushDeactivated();
