@@ -2,7 +2,7 @@
 #include "just_do_coffee.h"
 #include "../lcd/lcd.h"
 
-extern unsigned long steamTime;
+unsigned long steamTime;
 // inline static float TEMP_DELTA(float d) { return (d*DELTA_RANGE); }
 inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   return (
@@ -95,9 +95,13 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   static int flushStartTime;
   static double flushingDeltaT = 0;
 
-  if (sensorTemperature > steamTempSetPoint) readyToSteam = true;
+  if (currentState.steamSwitchState) steamTime = millis();
+  if (currentState.temperature > 135.f) readyToSteam = true;
 
-  if (sensorTemperature > steamTempSetPoint + 5.f || flushingStarted) {
+  if (millis() - steamTime >= STEAM_TIMEOUT || flushingStarted){
+    readyToSteam = false;
+    setBoilerOff();
+  } else if (sensorTemperature > steamTempSetPoint + 5.f ) {
     setBoilerOff();
   } else if (sensorTemperature > steamTempSetPoint){
       (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.7f) : setBoilerOff();
@@ -123,17 +127,20 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
     }else{
       setPumpOff();
       currentState.steamActive = false;
-      readyToSteam = false;
       flushingStarted = false;
     }
-  }else{
-    readyToSteam && currentState.steamSwitchState ? setPumpToPercentage(0.05): setPumpOff();
+  } else if (readyToSteam && currentState.steamSwitchState){
+     setPumpToPercentage(0.05);
+  } else {
+    setPumpOff();
   }
 
-  /*In case steam is forgotten ON for more than 15 min*/
-  if (currentState.smoothedPressure > passiveSteamPressure_) {
-    currentState.isSteamForgottenON = millis() - steamTime >= STEAM_TIMEOUT;
-  } else steamTime = millis();
+  /*In case steam is forgotten ON for more than 3 min*/
+  if (millis() - steamTime >= STEAM_TIMEOUT && currentState.temperature < ACTIVE_PROFILE(runningCfg).setpoint){
+    currentState.steamActive = false;
+    readyToSteam = false;
+    flushingStarted = false;
+    }
 }
 
 /*Water mode and all that*/

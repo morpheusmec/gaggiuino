@@ -7,7 +7,6 @@ struct SensorState {
   bool flushSwitchState;
   bool steamSwitchState;
   bool hotWaterSwitchState;
-  bool isSteamForgottenON;
   bool brewActive;
   bool flushActive;
   bool steamActive;

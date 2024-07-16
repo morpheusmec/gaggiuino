@@ -72,7 +72,6 @@ unsigned long brewingTimer;
 unsigned long thermoTimer;
 unsigned long scalesTimer;
 unsigned long flowTimer;
-unsigned long steamTime;
 unsigned long iddleTimer;
 
 //scales vars

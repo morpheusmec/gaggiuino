@@ -382,7 +382,6 @@ static void modeSelect(void) {
       else if (currentState.steamActive) steamCtrl(runningCfg, currentState);
       else {
         profiling();
-        steamTime = millis();
       }
       break;
     case OPERATION_MODES::OPMODE_manual:
@@ -394,11 +393,6 @@ static void modeSelect(void) {
       break;
     case OPERATION_MODES::OPMODE_steam:
       steamCtrl(runningCfg, currentState);
-
-      if (!currentState.steamActive) {
-        steamCtrl(runningCfg, currentState);
-        pageValuesRefresh();
-      }
       break;
     case OPERATION_MODES::OPMODE_descale:
       deScale(runningCfg, currentState);
@@ -794,7 +788,7 @@ static void profiling(void) {
   } else if (currentState.flushActive){
     setPumpToPercentage(0.5);
   }
-  else if (!currentState.steamActive && !currentState.hotWaterActive){
+  else {
     setPumpOff();
   }
   // Keep that water at temp
@@ -855,8 +849,6 @@ static void modeDetect(void) {
     iddleTimer = millis();
     lcdWakeUp();
   }
-   
-  if (!currentState.steamActive) steamTime = millis();
 
   static bool paramsReset = true;
   if (currentState.brewActive) {
@@ -927,17 +919,6 @@ static inline void sysHealthCheck(float pressureThreshold) {
       currentState.temperature  = thermocoupleRead() - runningCfg.offsetTemp;  // Making sure we're getting a value
       thermoTimer = millis() + GET_KTYPE_READ_EVERY;
     }
-  }
-
-  /*Shut down heaters if steam has been ON and unused fpr more than 10 minutes.*/
-  while (currentState.isSteamForgottenON) {
-    //Reloading the watchdog timer, if this function fails to run MCU is rebooted
-    watchdogReload();
-    lcdShowPopup("TURN STEAM OFF NOW!");
-    setPumpOff();
-    setBoilerOff();
-    setSteamBoilerRelayOff();
-    currentState.isSteamForgottenON = currentState.steamActive;
   }
 
   //Releasing the excess pressure after steaming or brewing if necessary

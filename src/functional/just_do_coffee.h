@@ -10,7 +10,7 @@
 #include <Arduino.h>
 
 
-const uint32_t STEAM_TIMEOUT = 900000UL; // steam mode timeout
+const uint32_t STEAM_TIMEOUT = 180000UL; // steam mode timeout
 const float MAX_WATER_TEMP = 95.f; // max temp allowed in hot water mode
 const float steamThreshold_ = 11.f; // max allowed pressure before heaters are disabled
 const float activeSteamPressure_ = 2.f; // DreamSteam enabling threshold.
