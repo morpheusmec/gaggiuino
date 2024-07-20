@@ -94,11 +94,10 @@ void solenoidBeat() {
 }
 
 void backFlush(SensorState &currentState) {
-  if (currentState.brewSwitchState) {
+  if (currentState.brewSwitchState || currentState.flushSwitchState) {
     if (flushCounter >= 2 * BACK_FLUSH_CYCLES ) {
-      flushDeactivated();
       currentState.brewSwitchState = false;
-      return;
+      currentState.flushSwitchState = false;
     }
     else {
       setSol3On();

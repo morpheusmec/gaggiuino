@@ -825,9 +825,13 @@ static void modeDetect(void) {
   currentState.flushActive = false;
   currentState.hotWaterActive = false;
 
-  if (currentState.steamSwitchState && selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale){
+  if (selectedOperationalMode == OPERATION_MODES::OPMODE_flush || selectedOperationalMode == OPERATION_MODES::OPMODE_descale){
+    return;
+  }
+
+  if (currentState.steamSwitchState){
     currentState.steamActive = true;
-  } else if (currentState.hotWaterSwitchState && selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale){
+  } else if (currentState.hotWaterSwitchState){
     currentState.hotWaterActive = true;
     currentState.steamActive = false;
   } else if (!currentState.steamActive && !currentState.hotWaterActive){
