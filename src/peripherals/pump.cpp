@@ -1,17 +1,20 @@
 /* 09:32 15/03/2023 - change triggering comment */
 #include "pump.h"
 #include "pindef.h"
-#include <PSM.h>
+#include <PSM2.h>
 #include "utils.h"
 #include "internal_watchdog.h"
 
-PSM pump(zcPin, dimmerPin, PUMP_RANGE, ZC_MODE, 1, 6);
+PSM2 pump(zcPin, dimmerPin, relayPin, PUMP_RANGE, ZC_MODE, 1, 1, 6);
 
 float flowPerClickAtZeroBar = 0.27f;
 int maxPumpClicksPerSecond = 50;
 float fpc_multiplier = 1.2f;
 
 int currentPumpValue = 0;
+int currentHeaterValue = 0;
+unsigned long controlTimer;
+
 
 float Pn [] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 float Ln [] = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.};
@@ -48,8 +51,7 @@ float findQ(float p, float l)
   fpl1 = Qn[ip][il] + (Qn[ip + 1][il] - Qn[ip][il]) * fractionp;
   fpl2 = Qn[ip][il + 1] + (Qn[ip + 1][il + 1] - Qn[ip][il + 1]) * fractionp;
   q = fpl1 + (fpl2 - fpl1) * fractionl;
-  LOG_DEBUG(",FindQ, %f, %f, %f, %f, %d", (float) millis() / 1000., p, l, q, (float) currentPumpValue / (float) PUMP_RANGE);
-  return q;
+ return q;
 }
 
 // Function that returns the cps, given pressure in bar and flow rate in g/s
@@ -70,7 +72,6 @@ float findL(float p, float q)
   while (!between(q, Qp[il], Qp[il + 1])) il++;
   fractionl = (q - Qp[il]) / (Qp[il + 1] - Qp[il]);
   l = Ln[il] + (Ln[il + 1] - Ln[il]) * fractionl;
-  LOG_DEBUG(",FindL, %f, %f, %f, %f", (float) millis() / 1000., p, l, q);
   return l;
 }
 
@@ -114,10 +115,12 @@ inline float getPumpPct(const float targetPressure, const float flowRestriction,
 // - expected target
 // - flow
 // - pressure direction
-void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState) {
-  LOG_DEBUG(",setPumpPressure, %f", (float) millis() / 1000.);
-  float pumpPct = getPumpPct(targetPressure, flowRestriction, currentState);
-  setPumpToPercentage(pumpPct);
+void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState) { 
+  if (millis() - controlTimer > 10) {
+    float pumpPct = getPumpPct(targetPressure, flowRestriction, currentState);
+    setPumpToPercentage(pumpPct);
+    controlTimer = millis();
+  }
 }
 
 void setPumpOff(void) {
@@ -128,12 +131,23 @@ void setPumpFullOn(void) {
   setPumpToPercentage(1.0);
 }
 
+float getCurrentPumpLoad(void){
+  return (float) currentPumpValue / (float) PUMP_RANGE;
+}
+
 void setPumpToPercentage(float percentage) {
-  int newPumpValue = (uint8_t) std::round(percentage * PUMP_RANGE);
+  int newPumpValue = constrain((uint8_t) std::round(percentage * PUMP_RANGE), 0, PUMP_RANGE);
   if (currentPumpValue != newPumpValue){
-    LOG_DEBUG(",setPumpToPercentage, %f, %f", (float) millis() / 1000., (float) newPumpValue / (float) PUMP_RANGE);
     currentPumpValue = newPumpValue;
     pump.set(newPumpValue);
+  }
+}
+
+void setHeaterToPercentage(float percentage) {
+  int newHeaterValue = constrain((uint8_t) std::round(percentage * PUMP_RANGE), 0, PUMP_RANGE);
+  if (currentHeaterValue != newHeaterValue){
+    currentHeaterValue = newHeaterValue;
+    pump.set2(newHeaterValue);
   }
 }
 
@@ -177,14 +191,13 @@ float getPumpFlow(const float pressure, const float cps) {
 
 float getLoadForFlow(const float pressure, const float flow) {
   if (flow == 0.f) return 0;
-  return constrain(findL(pressure, flow), 0.f, 1.f);
+  return findL(pressure, flow);
 }
 
 // Calculates pump percentage for the requested flow and updates the pump raw value
 void setPumpFlow(const float targetFlow, const float pressureRestriction, const SensorState &currentState) {
   // If a pressure restriction exists then the we go into pressure profile with a flowRestriction
   // which is equivalent but will achieve smoother pressure management
-  LOG_DEBUG(",setPumpFlow, %f", (float) millis() / 1000.);
   if (pressureRestriction > 0.f && currentState.smoothedPressure > pressureRestriction * 0.5f) {
     setPumpPressure(pressureRestriction, targetFlow, currentState);
   }

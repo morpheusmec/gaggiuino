@@ -53,15 +53,6 @@ static inline void setSol3Off(void) {
   digitalWrite(sol3Pin, HIGH); 
 }
 
-// Actuating the heater element
-static inline void setBoilerOn(void) {
-  digitalWrite(relayPin, HIGH);  // boilerPin -> HIGH
-}
-
-static inline void setBoilerOff(void) {
-  digitalWrite(relayPin, LOW);  // boilerPin -> LOW
-}
-
 static inline void setSteamValveRelayOn(void) {
   #ifdef steamValveRelayPin
   digitalWrite(steamValveRelayPin, HIGH);  // steamValveRelayPin -> HIGH

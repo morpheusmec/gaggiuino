@@ -53,33 +53,16 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
 
 }
 
-void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float factor_2, const bool brewActive) {
-  static uint32_t heaterWave;
-  static bool heaterState;
-  if (!heaterState && ((millis() - heaterWave) > (pulseLength * factor_1))) {
-    brewActive ? setBoilerOff() : setBoilerOn();
-    heaterState=!heaterState;
-    heaterWave=millis();
-  } else if (heaterState && ((millis() - heaterWave) > (pulseLength / factor_2))) {
-    brewActive ? setBoilerOn() : setBoilerOff();
-    heaterState=!heaterState;
-    heaterWave=millis();
-  }
+void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
+  setHeaterToPercentage(powerFactor);
 }
 
-void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
-  static uint32_t heaterWave;
-  static bool heaterState;
-  const float power = constrain(powerFactor, 0.f, 1.f);
-  if (!heaterState && ((millis() - heaterWave) > (cicleLength * power))) {
-    setBoilerOff();
-    heaterState=!heaterState;
-    heaterWave=millis();
-  } else if (heaterState && ((millis() - heaterWave) > (cicleLength * (1 - power)))) {
-    setBoilerOn();
-    heaterState=!heaterState;
-    heaterWave=millis();
-  }
+void setBoilerOn(){
+  setHeaterToPercentage(1.f);
+}
+
+void setBoilerOff(){
+  setHeaterToPercentage(0.f);
 }
 
 //#############################################################################################
@@ -145,7 +128,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
 
 /*Water mode and all that*/
 void hotWaterMode(SensorState &currentState) {
-  setPumpToPercentage(1.0);
+  setPumpToPercentage(0.5);
   setBoilerOn();
   if (currentState.temperature < MAX_WATER_TEMP) setBoilerOn();
   else setBoilerOff();

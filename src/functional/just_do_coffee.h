@@ -25,6 +25,8 @@ enum class HEATING {
 void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState);
 void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float factor_2, const bool brewActive);
 void setHeatersPower(const uint32_t cicleLength, const float powerFactor);
+void setBoilerOn();
+void setBoilerOff();
 void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState);
 void hotWaterMode(SensorState &currentState);
 

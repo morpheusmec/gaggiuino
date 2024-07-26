@@ -10,11 +10,15 @@
 
 constexpr uint8_t PUMP_RANGE = 250;
 
+float findQ(float p, float l);
+float findL(float p, float q);
 void pumpInit(const int powerLineFrequency, const float pumpFlowAtZero);
 void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState);
 void setPumpOff(void);
 void setPumpFullOn(void);
+float getCurrentPumpLoad(void);
 void setPumpToPercentage(const float percentage);
+void setHeaterToPercentage(const float percentage);
 long  getAndResetClickCounter(void);
 int getCPS(void);
 void pumpPhaseShift(void);
