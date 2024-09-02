@@ -4,9 +4,10 @@
 
 // STM32F4 pins definitions
 #define thermoDO      PB4
-#define thermoDI      PA7 // not used
+#define thermoDI      PA7
 #define thermoCS      PA6
 #define thermoCLK     PA5
+#define thermoRDY     PB9
 
 #define zcPin         PA0
 #define cup1DtcPin    PA4
@@ -31,7 +32,6 @@
 
 #define HX711_sck_1   PB0
 #define HX711_dout_1  PB8
-#define HX711_dout_2  PB9
 
 #define USART_LCD     Serial2 // PA2(TX) & PA3(RX)
 #define USART_ESP     Serial1 // PA9(TX) & PA10(RX)

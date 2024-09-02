@@ -9,18 +9,18 @@
 SPIClass thermoSPI(thermoDI, thermoDO, thermoCLK);
 Adafruit_MAX31855 thermocouple(thermoCS, &thermoSPI);
 #else
-#include <max6675.h>
+#include <Adafruit_MAX31856.h>
 SPIClass thermoSPI(thermoDI, thermoDO, thermoCLK);
-MAX6675 thermocouple(thermoCS, &thermoSPI);
+Adafruit_MAX31856 thermocouple(thermoCS, &thermoSPI);
 #endif
 
 static inline void thermocoupleInit(void) {
   thermocouple.begin();
+  thermocouple.setThermocoupleType(MAX31856_TCTYPE_E);
 }
 
 static inline float thermocoupleRead(void) {
-  // return 100.0;
-  return thermocouple.readCelsius();
+  return thermocouple.readThermocoupleTemperature();
 }
 
 #endif

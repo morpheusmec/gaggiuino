@@ -24,9 +24,14 @@ static inline void pinInit(void) {
   pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
   pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
   pinMode(steamPin, INPUT_PULLUP);
+  pinMode(thermoRDY, INPUT_PULLUP);
   #ifdef waterPin
   pinMode(waterPin, INPUT_PULLUP);
   #endif
+}
+
+static inline bool tempReady(void) {
+  return digitalRead(thermoRDY) == LOW;
 }
 
 static inline bool cup1BtnState(void) {
