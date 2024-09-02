@@ -96,11 +96,11 @@ inline float getPumpPct(const float targetPressure, const float flowRestriction,
   float pumpPctToMaintainFlow = getLoadForFlow(currentState.smoothedPressure, currentState.smoothedPumpFlow);
 
   if (diff > 2.f) {
-    return fminf(maxPumpPct, 0.25f + 0.2f * diff);
+    return fminf(maxPumpPct, pumpPctToMaintainFlow + 0.2f * diff);
   }
 
-  if (diff > 0.f) {
-    return fminf(maxPumpPct, pumpPctToMaintainFlow * 0.95f + 0.1f + 0.2f * diff);
+  if (diff > -1.f) {
+    return fminf(maxPumpPct, pumpPctToMaintainFlow + 0.1f * diff);
   }
 
   if (currentState.pressureChangeSpeed < 0) {
