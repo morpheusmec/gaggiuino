@@ -9,15 +9,15 @@
 #define thermoCLK     PA5
 #define thermoRDY     PB9
 
-#define zcPin         PA0
+#define zcPin         PC15
 #define cup1DtcPin    PA4
-#define cup2DtcPin    PC14
-#define sol2Pin       PB5
+#define cup2DtcPin    PC13
+#define sol2Pin       PA15
 #define sol3Pin       PB3
-#define relayPin      PA15
+#define relayPin      PB5
 #define dimmerPin     PA1
-#define steamPin      PC15
-#define valvePin      PC13
+#define steamPin      PC14
+#define valvePin      PB10
 #if defined(SINGLE_BOARD)
 #define waterPin      PB15
 #else
