@@ -19,6 +19,7 @@ digitalWrite(sol3Pin, HIGH);
 
   pinMode(thermoRDY, INPUT_PULLUP);
   digitalWrite(shutdownPin, HIGH);
+  pinMode(shutdownPin, OUTPUT_OPEN_DRAIN);
 }
 
 static inline bool tempReady(void) {

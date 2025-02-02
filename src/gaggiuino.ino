@@ -739,6 +739,7 @@ static void profiling(void) {
     justDoCoffee(runningCfg, currentState);
   } else {
     setBoilerOff();
+    digitalWrite(shutdownPin, LOW);
   }
 }
 
