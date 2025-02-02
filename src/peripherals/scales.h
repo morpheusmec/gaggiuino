@@ -8,7 +8,7 @@
 
 #include "measurements.h"
 
-void scalesInit(float scalesF1, float scalesF2);
+void scalesInit(float scalesF1);
 void scalesTare(void);
 Measurement scalesGetWeight(void);
 bool scalesIsPresent(void);

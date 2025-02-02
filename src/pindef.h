@@ -9,26 +9,16 @@
 #define thermoCLK     PA5
 #define thermoRDY     PB9
 
-#define zcPin         PC15
-#define cup1DtcPin    PA4
+#define cup1DtcPin    PA0
 #define cup2DtcPin    PC13
-#define sol2Pin       PA15
-#define sol3Pin       PB3
-#define relayPin      PB5
-#define dimmerPin     PA1
 #define steamPin      PC14
-#define valvePin      PB10
-#if defined(SINGLE_BOARD)
-#define waterPin      PB15
-#else
 #define waterPin      PB1
-#endif
 
-#ifdef PCBV2
-// PCB V2
-#define steamValveRelayPin PB12
-#define steamBoilerRelayPin PB13
-#endif
+#define zcPin         PC15
+#define pumpPin       PA1
+#define sol3Pin       PB3
+#define sol2Pin       PA15
+#define heaterPin     PB5
 
 #define HX711_sck_1   PB0
 #define HX711_dout_1  PB8

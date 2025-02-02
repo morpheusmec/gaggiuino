@@ -25,7 +25,7 @@ unsigned char scale_clk = OUTPUT;
 unsigned char scale_clk = OUTPUT_OPEN_DRAIN;
 #endif
 
-void scalesInit(float scalesF1, float scalesF2) {
+void scalesInit(float scalesF1) {
   hwScalesPresent = false;
   // Forced predicitve scales in case someone with actual hardware scales wants to use them.
   if (FORCE_PREDICTIVE_SCALES) {

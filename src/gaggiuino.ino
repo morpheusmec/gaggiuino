@@ -24,9 +24,6 @@ eepromValues_t runningCfg;
 
 SystemState systemState;
 
-LED led;
-TOF tof;
-
 void setup(void) {
   LOG_INIT();
   LOG_INFO("Gaggiuino (fw: %s) booting", AUTO_VERSION);
@@ -35,24 +32,6 @@ void setup(void) {
   pinInit();
   LOG_INFO("Pin init");
 
-  setBoilerOff();  // relayPin LOW
-  setSteamValveRelayOff();
-  setSteamBoilerRelayOff();
-  LOG_INFO("Boiler turned off");
-
-  //Pump
-  setPumpOff();
-  LOG_INFO("Pump turned off");
-
-  // Valve
-  closeValve();
-  LOG_INFO("Valve closed");
-
-  // Button and solenoids
-  setSol2Off();
-  setSol3Off();
-  LOG_INFO("Relays turned off");
-  
   lcdInit();
   LOG_INFO("LCD Init");
 
@@ -62,14 +41,8 @@ void setup(void) {
   LOG_INFO("DBG init");
 #endif
 
-  // Initialise comms library for talking to the ESP mcu
-  espCommsInit();
-
-  // Initialize LED
-  led.begin();
-  led.setColor(9u, 0u, 9u); // WHITE
   // Init the tof sensor
-  tof.init(currentState);
+  currentState.waterLvl = 30u;
 
   // Initialising the saved values or writing defaults if first start
   eepromInit();
@@ -89,18 +62,15 @@ void setup(void) {
   LOG_INFO("Pressure sensor init");
 
   // Scales handling
-  scalesInit(runningCfg.scalesF1, runningCfg.scalesF2);
+  scalesInit(runningCfg.scalesF1);
   LOG_INFO("Scales init");
 
   // Pump init
-  pumpInit(runningCfg.powerLineFrequency, runningCfg.pumpFlowAtZero);
+  pumpInit(runningCfg.powerLineFrequency);
   LOG_INFO("Pump init");
 
   pageValuesRefresh();
   LOG_INFO("Setup sequence finished");
-
-  // Change LED colour on setup exit.
-  led.setColor(9u, 0u, 9u); // 64171
 
   iwdcInit();
 }
@@ -112,15 +82,13 @@ void setup(void) {
 
 //Main loop where all the logic is continuously run
 void loop(void) {
-  fillBoiler();
   if (lcdCurrentPageId != lcdLastCurrentPageId) pageValuesRefresh();
   lcdListen();
   sensorsRead();
   modeDetect();
-  if (selectedOperationalMode != OPERATION_MODES::OPMODE_flush && selectedOperationalMode != OPERATION_MODES::OPMODE_descale) relaysActuate();
+  relaysActuate();
   modeSelect();
   lcdRefresh();
-  espCommsSendSensorData(currentState);
   sysHealthCheck(SYS_PRESSURE_IDLE);
 }
 
@@ -131,14 +99,11 @@ void loop(void) {
 
 static void sensorsRead(void) {
   sensorReadSwitches();
-  espCommsReadData();
   sensorsReadTemperature();
   sensorsReadWeight();
   sensorsReadPressure();
   calculateWeightAndFlow();
   updateStartupTimer();
-  readTankWaterLevel();
-  doLed();
 }
 
 static bool cup1_read_switch(void){
@@ -197,8 +162,8 @@ static void sensorReadSwitches(void) {
     } 
   }
 
-  currentState.steamSwitchState = steamState();
-  currentState.hotWaterSwitchState = waterPinState();
+  currentState.steamSwitchState = steamBtnState();
+  currentState.hotWaterSwitchState = waterBtnState();
 }
 
 static void sensorsReadTemperature(void) {
@@ -208,6 +173,7 @@ static void sensorsReadTemperature(void) {
 }
 
 static void relaysActuate(void) {
+  if (selectedOperationalMode == OPERATION_MODES::OPMODE_flush || selectedOperationalMode == OPERATION_MODES::OPMODE_descale) return;
   static bool relWasNeeded = (currentState.brewActive || currentState.flushActive);
   static unsigned int shotEndTimer = -100000;
   bool relNeeded = (currentState.brewActive || currentState.flushActive);
@@ -215,7 +181,6 @@ static void relaysActuate(void) {
   if (relNeeded && !relWasNeeded){
     setSol2Off();
     setSol3On();
-    openValve();
     delay(100);
   }
   else if (!relNeeded && relWasNeeded){
@@ -224,9 +189,8 @@ static void relaysActuate(void) {
   }
 
   if (!relNeeded){
-    ((millis() - shotEndTimer > 60) && (millis() - shotEndTimer < 45000)) ? setSol2On() : setSol2Off();
+    ((millis() - shotEndTimer > 60) && (millis() - shotEndTimer < 10000)) ? setSol2On() : setSol2Off();
     if (millis() - shotEndTimer > 150) setSol3Off();
-    if (millis() - shotEndTimer > 20) closeValve();
   }
 
   relWasNeeded = relNeeded;
@@ -329,17 +293,6 @@ static void calculateWeightAndFlow(void) {
   }
 }
 
-// return the reading in mm of the tank water level.
-static void readTankWaterLevel(void) {
-  if (lcdCurrentPageId == NextionPage::Home) {
-    // static uint32_t tof_timeout = millis();
-    // if (millis() >= tof_timeout) {
-    currentState.waterLvl = tof.readLvl();
-      // tof_timeout = millis() + 500;
-    // }
-  }
-}
-
 //##############################################################################################################################
 //############################################______PAGE_CHANGE_VALUES_REFRESH_____#############################################
 //##############################################################################################################################
@@ -364,7 +317,6 @@ static void pageValuesRefresh() {
 //############################____OPERATIONAL_MODE_CONTROL____#################################
 //#############################################################################################
 static void modeSelect(void) {
-  if (!systemState.startupInitFinished) return;
 
   switch (selectedOperationalMode) {
     //REPLACE ALL THE BELOW WITH OPMODE_auto_profiling
@@ -422,11 +374,7 @@ static void lcdRefresh(void) {
     #endif
 
     /*LCD temp output*/
-    float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
-    // float liveTempWithOffset = currentState.temperature - runningCfg.offsetTemp;
-    currentState.waterTemperature = (currentState.temperature > (float)ACTIVE_PROFILE(runningCfg).setpoint && currentState.brewSwitchState)
-      ? currentState.temperature /// (float)brewTempSetPoint + (float)ACTIVE_PROFILE(runningCfg).setpoint
-      : currentState.temperature;
+    currentState.waterTemperature = currentState.temperature;
 
     lcdSetTemperature(std::floor((uint16_t)currentState.waterTemperature));
 
@@ -767,8 +715,6 @@ static void profiling(void) {
     uint32_t timeInShot = millis() - brewingTimer;
     phaseProfiler.updatePhase(timeInShot, currentState);
     CurrentPhase& currentPhase = phaseProfiler.getCurrentPhase();
-    ShotSnapshot shotSnapshot = buildShotSnapshot(timeInShot, currentState, currentPhase);
-    espCommsSendShotData(shotSnapshot, 100);
 
     if (phaseProfiler.isFinished()) {
       setPumpOff();
@@ -776,12 +722,10 @@ static void profiling(void) {
     } else if (currentPhase.getType() == PHASE_TYPE::PHASE_TYPE_PRESSURE) {
       float newBarValue = currentPhase.getTarget();
       float flowRestriction =  currentPhase.getRestriction();
-      openValve();
       setPumpPressure(newBarValue, flowRestriction, currentState);
     } else {
       float newFlowValue = currentPhase.getTarget();
       float pressureRestriction =  currentPhase.getRestriction();
-      openValve();
       setPumpFlow(newFlowValue, pressureRestriction, currentState);
     }
   } else if (currentState.flushActive){
@@ -800,12 +744,10 @@ static void profiling(void) {
 
 static void manualFlowControl(void) {
   if (currentState.brewActive) {
-    openValve();
     float flow_reading = lcdGetManualFlowVol() / 10.f ;
     setPumpFlow(flow_reading, 0.f, currentState);
   } else {
     setPumpOff();
-    // closeValve();
   }
   justDoCoffee(runningCfg, currentState);
 }
@@ -815,11 +757,6 @@ static void manualFlowControl(void) {
 //#############################################################################################
 
 static void modeDetect(void) {
-  // Do not allow brew detection while system reports not ready.
-  if (!sysReadinessCheck()) {
-    return;
-  }
-
   currentState.brewActive = false;
   currentState.flushActive = false;
   currentState.hotWaterActive = false;
@@ -879,20 +816,10 @@ static void brewParamsReset(void) {
   phaseProfiler.reset();
 }
 
-static bool sysReadinessCheck(void) {
-  // Startup procedures not finished
-  if (!systemState.startupInitFinished) {
-    return false;
-  }
-  // If there's not enough water in the tank
-  if ((lcdCurrentPageId != NextionPage::BrewGraph || lcdCurrentPageId != NextionPage::BrewManual)
-  && currentState.waterLvl < MIN_WATER_LVL)
-  {
-    lcdShowPopup("Fill the water tank!");
-    return false;
-  }
-
-  return true;
+// Function to track time since system has started
+static unsigned long getTimeSinceInit(void) {
+  static unsigned long startTime = millis();
+  return millis() - startTime;
 }
 
 static inline void sysHealthCheck(float pressureThreshold) {
@@ -901,14 +828,13 @@ static inline void sysHealthCheck(float pressureThreshold) {
 
   /* This *while* is here to prevent situations where the system failed to get a temp reading and temp reads as 0 or -7(cause of the offset)
   If we would use a non blocking function then the system would keep the SSR in HIGH mode which would most definitely cause boiler overheating */
-  while (currentState.temperature <= 0.0f || currentState.temperature == NAN || currentState.temperature >= 190.0f) {
+  while (currentState.temperature + runningCfg.offsetTemp <= 0.0f || currentState.temperature == NAN || currentState.temperature + runningCfg.offsetTemp >= 200.0f) {
     //Reloading the watchdog timer, if this function fails to run MCU is rebooted
     watchdogReload();
     /* In the event of the temp failing to read while the SSR is HIGH
     we force set it to LOW while trying to get a temp reading - IMPORTANT safety feature */
     setPumpOff();
     setBoilerOff();
-    setSteamBoilerRelayOff();
     if (millis() > thermoTimer) {
       LOG_ERROR("Cannot read temp from thermocouple (last read: %.1lf)!", static_cast<double>(currentState.temperature));
       currentState.steamActive ? lcdShowPopup("COOLDOWN") : lcdShowPopup("TEMP READ ERROR"); // writing a LCD message
@@ -916,127 +842,6 @@ static inline void sysHealthCheck(float pressureThreshold) {
       thermoTimer = millis() + GET_KTYPE_READ_EVERY;
     }
   }
-
-  //Releasing the excess pressure after steaming or brewing if necessary
-  #if defined LEGO_VALVE_RELAY || defined SINGLE_BOARD
-
-  // No point going through the whole thing if this first condition isn't met.
-  if (currentState.brewSwitchState || currentState.steamActive || currentState.hotWaterSwitchState || currentState.flushActive) {
-    systemHealthTimer = millis() + HEALTHCHECK_EVERY;
-    return;
-  }
-  // Should enter the block every "systemHealthTimer" seconds
-  if (millis() >= systemHealthTimer) {
-    while (currentState.smoothedPressure >= pressureThreshold && currentState.temperature < 100.f)
-    {
-      //Reloading the watchdog timer, if this function fails to run MCU is rebooted
-      watchdogReload();
-      switch (lcdCurrentPageId) {
-        case NextionPage::BrewManual:
-        case NextionPage::BrewGraph:
-        case NextionPage::GraphPreview:
-          modeDetect();
-          lcdRefresh();
-          lcdListen();
-          sensorsRead();
-          justDoCoffee(runningCfg, currentState);
-          break;
-        default:
-          sensorsRead();
-          // lcdShowPopup("Releasing pressure!");
-          // setPumpOff();
-          // setBoilerOff();
-          // setSteamValveRelayOff();
-          // setSteamBoilerRelayOff();
-          // openValve();
-          break;
-      }
-    }
-    closeValve();
-    systemHealthTimer = millis() + HEALTHCHECK_EVERY;
-  }
-  // Throwing a pressure release countodown.
-  if (lcdCurrentPageId == NextionPage::BrewGraph) return;
-  if (lcdCurrentPageId == NextionPage::BrewManual) return;
-
-  // if (currentState.smoothedPressure >= pressureThreshold && currentState.temperature < 100.f) {
-  //   if (millis() >= systemHealthTimer - 3500ul && millis() <= systemHealthTimer - 500ul) {
-  //     char tmp[25];
-  //     int countdown = (int)(systemHealthTimer-millis())/1000;
-  //     unsigned int check = snprintf(tmp, sizeof(tmp), "Dropping beats in: %i", countdown);
-  //     if (check > 0 && check <= sizeof(tmp)) {
-  //       lcdShowPopup(tmp);
-  //     }
-  //   }
-  // }
-  #endif
-}
-
-// Function to track time since system has started
-static unsigned long getTimeSinceInit(void) {
-  static unsigned long startTime = millis();
-  return millis() - startTime;
-}
-
-static void fillBoiler(void) {
-  #if defined LEGO_VALVE_RELAY || defined SINGLE_BOARD
-
-  if (systemState.startupInitFinished) {
-    return;
-  }
-
-  if (currentState.temperature > BOILER_FILL_SKIP_TEMP) {
-    systemState.startupInitFinished = true;
-    return;
-  }
-
-  if (isBoilerFillPhase(getTimeSinceInit()) && !isSwitchOn()) {
-    fillBoilerUntilThreshod(getTimeSinceInit());
-  }
-  else if (isSwitchOn()) {
-    lcdShowPopup("Brew Switch ON!");
-  }
-#else
-  systemState.startupInitFinished = true;
-#endif
-}
-
-static bool isBoilerFillPhase(unsigned long elapsedTime) {
-  return lcdCurrentPageId == NextionPage::Home && elapsedTime >= BOILER_FILL_START_TIME;
-}
-
-static bool isBoilerFull(unsigned long elapsedTime) {
-  bool boilerFull = false;
-  if (elapsedTime > BOILER_FILL_START_TIME + 1000UL) {
-    boilerFull =  (previousSmoothedPressure - currentState.smoothedPressure > -0.02f)
-                &&
-                  (previousSmoothedPressure - currentState.smoothedPressure < 0.001f);
-  }
-
-  return elapsedTime >= BOILER_FILL_TIMEOUT || boilerFull;
-}
-
-// Checks if Brew switch is ON
-static bool isSwitchOn(void) {
-  return currentState.brewSwitchState && lcdCurrentPageId == NextionPage::Home;
-}
-
-static void fillBoilerUntilThreshod(unsigned long elapsedTime) {
-  if (elapsedTime >= BOILER_FILL_TIMEOUT) {
-    systemState.startupInitFinished = true;
-    return;
-  }
-
-  if (isBoilerFull(elapsedTime)) {
-    closeValve();
-    setPumpOff();
-    systemState.startupInitFinished = true;
-    return;
-  }
-
-  lcdShowPopup("Filling boiler!");
-  openValve();
-  setPumpToPercentage(0.35);
 }
 
 static void updateStartupTimer(void) {
@@ -1056,33 +861,3 @@ static void cpsInit(eepromValues_t &eepromValues) {
   }
 }
 
-static void doLed(void) {
-  if (runningCfg.ledDisco && currentState.brewActive) {
-    switch(lcdCurrentPageId) {
-      case NextionPage::BrewGraph:
-      case NextionPage::BrewManual:
-        led.setDisco(led.CLASSIC);
-        break;
-      case NextionPage::Flush:
-        led.setDisco(led.STROBE);
-        break;
-      case NextionPage::Descale:
-        led.setDisco(led.DESCALE);
-        break;
-      default:
-        led.setColor(0, 0, 0);
-        break;
-    }
-  } else {
-    switch(lcdCurrentPageId) {
-      case NextionPage::Led:
-        static uint32_t timer = millis();
-        if (millis() > timer) {
-          timer = millis() + 100u;
-          lcdFetchLed(runningCfg);
-        }
-      default: // intentionally fall through
-        led.setColor(runningCfg.ledR, runningCfg.ledG, runningCfg.ledB);
-    }
-  }
-}

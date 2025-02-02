@@ -5,16 +5,14 @@
 #include "utils.h"
 #include "internal_watchdog.h"
 
-PSM2 pump(zcPin, dimmerPin, relayPin, PUMP_RANGE, ZC_MODE, 1, 1, 6);
+PSM2 pump(zcPin, pumpPin, heaterPin, PUMP_RANGE, ZC_MODE, 1, 1, 6);
 
-float flowPerClickAtZeroBar = 0.27f;
 int maxPumpClicksPerSecond = 50;
 float fpc_multiplier = 1.2f;
 
 int currentPumpValue = 0;
 int currentHeaterValue = 0;
 unsigned long controlTimer;
-
 
 float Pn [] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 float Ln [] = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.};
@@ -78,10 +76,9 @@ float findL(float p, float q)
 // Initialising some pump specific specs, mainly:
 // - max pump clicks(dependant on region power grid spec)
 // - pump clicks at 0 pressure in the system
-void pumpInit(const int powerLineFrequency, const float pumpFlowAtZero) {
+void pumpInit(const int powerLineFrequency) {
   // pump.freq = powerLineFrequency;
   maxPumpClicksPerSecond = powerLineFrequency;
-  flowPerClickAtZeroBar = pumpFlowAtZero;
   fpc_multiplier = 60.f / (float)maxPumpClicksPerSecond;
 }
 
