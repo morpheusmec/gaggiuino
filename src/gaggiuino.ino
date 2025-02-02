@@ -31,15 +31,15 @@ void setup(void) {
   // Various pins operation mode handling
   pinInit();
   LOG_INFO("Pin init");
-
+  
   lcdInit();
   LOG_INFO("LCD Init");
 
-#if defined(DEBUG_ENABLED)
-  // Debug init if enabled
-  dbgInit();
-  LOG_INFO("DBG init");
-#endif
+  #if defined(DEBUG_ENABLED)
+    // Debug init if enabled
+    dbgInit();
+    LOG_INFO("DBG init");
+  #endif
 
   // Init the tof sensor
   currentState.waterLvl = 30u;

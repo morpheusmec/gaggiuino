@@ -19,6 +19,7 @@
 #define sol3Pin       PB3
 #define sol2Pin       PA15
 #define heaterPin     PB5
+#define shutdownPin   PA4
 
 #define HX711_sck_1   PB0
 #define HX711_dout_1  PB8
