@@ -11,22 +11,30 @@ uint8_t counter = 0;
 unsigned long descalingTimer = 0;
 int descalingCycle = 0;
 
-void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
+void deScale(eepromValues_t &runningCfg, SensorState &currentState) {
+  float pumpSpeed = 1./3.;
+  uint16_t time_each = 10000;
   switch (descalingState) {
     case DescalingState::IDLE: // Waiting for fuckfest to begin
       if (currentState.brewSwitchState) {
-        ACTIVE_PROFILE(runningCfg).setpoint = 9;
-        openValve();
-        setSteamValveRelayOn();
+        ACTIVE_PROFILE(runningCfg).setpoint = 70;
         descalingState = DescalingState::DESCALING_PHASE1;
         descalingCycle = 0;
         descalingTimer = millis();
       }
       break;
-    case DescalingState::DESCALING_PHASE1: // Slowly penetrating that scale
+    case DescalingState::DESCALING_PHASE1: // Normally open
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
-      setPumpToPercentage(0.1);
-      if (millis() - descalingTimer > DESCALE_PHASE1_EVERY) {
+      setSol2Off();
+      setSol3Off();
+      if (!currentState.hotWaterSwitchState && !currentState.steamSwitchState){
+        setPumpToPercentage(pumpSpeed);
+      } else {
+        setPumpOff();
+        lcdShowPopup("Turn knob to neutral position");
+        descalingTimer = millis();
+      }
+      if (millis() - descalingTimer > 3000) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
@@ -36,20 +44,67 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
         }
       }
       break;
-    case DescalingState::DESCALING_PHASE2: // Softening the f outta that scale
+    case DescalingState::DESCALING_PHASE2: // hot water
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
-      setPumpOff();
-      if (millis() - descalingTimer > DESCALE_PHASE2_EVERY) {
+      setSol2Off();
+      setSol3Off();
+      if (currentState.hotWaterSwitchState){
+        setPumpToPercentage(pumpSpeed);
+      } else {
+        setPumpOff();
+        lcdShowPopup("Turn knob to hot water position");
+        descalingTimer = millis();
+      }
+      if (millis() - descalingTimer > time_each) {
         descalingTimer = millis();
         lcdSetDescaleCycle(descalingCycle++);
         descalingState = DescalingState::DESCALING_PHASE3;
       }
       break;
-    case DescalingState::DESCALING_PHASE3: // Fucking up that scale big time
+    case DescalingState::DESCALING_PHASE3: // steam wand
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
-      setPumpToPercentage(0.30);
-      if (millis() - descalingTimer > DESCALE_PHASE3_EVERY) {
-        solenoidBeat();
+      setSol2Off();
+      setSol3Off();
+      if (currentState.steamSwitchState){
+        setPumpToPercentage(pumpSpeed);
+      } else {
+        setPumpOff();
+        lcdShowPopup("Turn knob to steam position");
+        descalingTimer = millis();
+      }
+      if (millis() - descalingTimer > time_each) {
+        solenoidBeat3W();
+        lcdSetDescaleCycle(descalingCycle++);
+        if (descalingCycle < 100) {
+          descalingTimer = millis();
+          descalingState = DescalingState::DESCALING_PHASE4;
+        } else {
+          descalingState = DescalingState::FINISHED;
+        }
+      }
+      break;
+    case DescalingState::DESCALING_PHASE4: // Brewhead
+      currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
+      setSol2Off();
+      setSol3On();
+      setPumpToPercentage(pumpSpeed);
+      if (millis() - descalingTimer > time_each) {
+        lcdSetDescaleCycle(descalingCycle++);
+        if (descalingCycle < 100) {
+          descalingTimer = millis();
+          descalingState = DescalingState::DESCALING_PHASE5;
+        } else {
+          descalingState = DescalingState::FINISHED;
+        }
+      }
+      break;
+    case DescalingState::DESCALING_PHASE5: // purge
+      currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
+      setSol2On();
+      setSol3On();
+      setPumpToPercentage(pumpSpeed);
+      if (millis() - descalingTimer > 3000) {
+        solenoidBeat2W();
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
@@ -61,9 +116,10 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
       break;
     case DescalingState::FINISHED: // Scale successufuly fucked
       setPumpOff();
-      closeValve();
-      setSteamValveRelayOff();
+      setSol2Off();
+      setSol3Off();
       currentState.brewSwitchState ? descalingState = DescalingState::FINISHED : descalingState = DescalingState::IDLE;
+      currentState.brewSwitchState = false;
       if (millis() - descalingTimer > 1000) {
         lcdBrewTimerStop();
         lcdShowPopup("FINISHED");
@@ -74,23 +130,44 @@ void deScale(eepromValues_t &runningCfg, const SensorState &currentState) {
   justDoCoffee(runningCfg, currentState);
 }
 
-void solenoidBeat() {
+void solenoidBeat3W() {
   setPumpFullOn();
-  closeValve();
+  setSol3On();
   delay(1000);
   watchdogReload();
-  openValve();
+  setSol3Off();
   delay(200);
-  closeValve();
+  setSol3On();
   delay(1000);
   watchdogReload();
-  openValve();
+  setSol3Off();
   delay(200);
-  closeValve();
+  setSol3On();
   delay(1000);
   watchdogReload();
-  openValve();
+  setSol3Off();
   setPumpOff();
+}
+
+void solenoidBeat2W() {
+  setSol3On();
+  setPumpFullOn();
+  setSol2On();
+  delay(1000);
+  watchdogReload();
+  setSol2Off();
+  delay(200);
+  setSol2On();
+  delay(1000);
+  watchdogReload();
+  setSol2Off();
+  delay(200);
+  setSol2On();
+  delay(1000);
+  watchdogReload();
+  setSol2Off();
+  setPumpOff();
+  setSol3Off();
 }
 
 void backFlush(SensorState &currentState) {

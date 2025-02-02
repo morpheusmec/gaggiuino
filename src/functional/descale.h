@@ -20,11 +20,14 @@ enum class DescalingState {
   DESCALING_PHASE1,
   DESCALING_PHASE2,
   DESCALING_PHASE3,
+  DESCALING_PHASE4,
+  DESCALING_PHASE5,
   FINISHED
 };
 
-void deScale(eepromValues_t &runningCfg, const SensorState &currentState);
-void solenoidBeat(void);
+void deScale(eepromValues_t &runningCfg, SensorState &currentState);
+void solenoidBeat3W(void);
+void solenoidBeat2W(void);
 void backFlush(SensorState &currentState);
 void flushActivated(void);
 void flushDeactivated(void);

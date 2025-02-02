@@ -12,9 +12,9 @@ static inline void pinInit(void) {
   pinMode(steamPin, INPUT_PULLUP);
   pinMode(waterPin, INPUT_PULLUP);
 
-digitalWrite(sol2Pin, HIGH);
+  digitalWrite(sol2Pin, HIGH);
   pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
-digitalWrite(sol3Pin, HIGH);
+  digitalWrite(sol3Pin, HIGH);
   pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
 
   pinMode(thermoRDY, INPUT_PULLUP);
