@@ -12,6 +12,7 @@
 
 #ifdef LOG_LEVEL
   void log(const char *prefix, const char *file, const int line, const char *msg, ...);
+  void simpleLog(const char *msg, ...);
   void log_init(void);
 
   #define LOG_INIT() do { log_init(); } while (0)
@@ -42,5 +43,5 @@
 #else
   #define LOG_DEBUG(msg, ...)
 #endif
-
+#define LOG_SIMPLE(msg, ...)    do { simpleLog(msg, ##__VA_ARGS__); } while (0)
 #endif
