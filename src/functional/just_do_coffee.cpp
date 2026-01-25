@@ -75,11 +75,11 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
   static bool readyToSteam = false;
   static bool flushingStarted = false;
-  static int flushStartTime;
+  static uint32_t flushStartTime;
   static double flushingDeltaT = 0;
 
   if (currentState.steamSwitchState) steamTime = millis();
-  if (currentState.temperature > 135.f) readyToSteam = true;
+  if (currentState.temperature > 135.f || currentState.temperature > steamTempSetPoint) readyToSteam = true;
 
   if (millis() - steamTime >= STEAM_TIMEOUT || flushingStarted){
     readyToSteam = false;
@@ -87,7 +87,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   } else if (sensorTemperature > steamTempSetPoint + 5.f ) {
     setBoilerOff();
   } else if (sensorTemperature > steamTempSetPoint){
-      (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.7f) : setBoilerOff();
+      (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.85f) : setBoilerOff();
   } else {
     setBoilerOn();
   }
@@ -105,7 +105,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   }
 
   if (flushingStarted){
-    if (millis() - flushStartTime < (long) (200. * flushingDeltaT)){
+    if (millis() - flushStartTime < (uint32_t) (200. * flushingDeltaT)){
       setPumpFullOn();
     }else{
       setPumpOff();
