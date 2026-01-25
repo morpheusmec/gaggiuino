@@ -233,23 +233,16 @@ static void sensorsReadPressure(void) {
     currentState.smoothedPressure = smoothPressure.updateEstimate(currentState.pressure);
     currentState.pressureChangeSpeed = (currentState.smoothedPressure - previousSmoothedPressure) / elapsedTimeSec;
     pressureTimer = millis();
-    if (currentState.brewActive) {
-      LOG_DEBUG(",P, %f, %f, %f", (float) millis() / 1000., currentState.pressure, currentState.smoothedPressure);
-    }
   }
 }
 
-static long sensorsReadFlow(float elapsedTimeSec) {
-  long pumpClicks = getAndResetClickCounter();
-  currentState.pumpCPS = (float) pumpClicks / elapsedTimeSec;
-
-  currentState.pumpFlow = getPumpFlow(currentState.smoothedPressure, currentState.pumpCPS);
-
+void sensorsReadFlow(float elapsedTimeSec) {
+  currentState.pumpLoad = getAndResetLoadAverage();
+  currentState.pumpFlow = findQ(currentState.smoothedPressure, currentState.pumpLoad);
   previousSmoothedPumpFlow = currentState.smoothedPumpFlow;
   // Some flow smoothing
   currentState.smoothedPumpFlow = smoothPumpFlow.updateEstimate(currentState.pumpFlow);
   currentState.pumpFlowChangeSpeed = (currentState.smoothedPumpFlow - previousSmoothedPumpFlow) / elapsedTimeSec;
-  return pumpClicks;
 }
 
 static void calculateWeightAndFlow(void) {
@@ -260,10 +253,9 @@ static void calculateWeightAndFlow(void) {
     if (currentState.weight < -.3f) currentState.tarePending = true;
 
     if (elapsedTime > REFRESH_FLOW_EVERY) {
-      LOG_DEBUG(",calculateWeightandFlow, %f", (float) millis() / 1000.);
       flowTimer = millis();
       float elapsedTimeSec = elapsedTime / 1000.f;
-      long pumpClicks = sensorsReadFlow(elapsedTimeSec);
+      sensorsReadFlow(elapsedTimeSec);
       float consideredFlow = currentState.smoothedPumpFlow * elapsedTimeSec;
       // Update predictive class with our current phase
       CurrentPhase& phase = phaseProfiler.getCurrentPhase();
@@ -271,8 +263,8 @@ static void calculateWeightAndFlow(void) {
 
       // Start the predictive weight calculations when conditions are true
       if (predictiveWeight.isOutputFlow() || currentState.weight > 0.4f) {
-        float flowrate = getPumpFlow(currentState.smoothedPressure, (float) pumpClicks / elapsedTimeSec);
-        float actualFlow = (consideredFlow > flowrate * elapsedTimeSec) ? consideredFlow : flowrate * elapsedTimeSec;
+        float flowrate = findQ(currentState.smoothedPressure, getCurrentPumpLoad());
+        float actualFlow = flowrate * elapsedTimeSec;
         /* Probabilistically the flow is lower if the shot is just started winding up and we're flow profiling,
         once pressure stabilises around the setpoint the flow is either stable or puck restriction is high af. */
         if ((ACTIVE_PROFILE(runningCfg).mfProfileState || ACTIVE_PROFILE(runningCfg).tpType) && currentState.pressureChangeSpeed > 0.15f) {
@@ -289,6 +281,7 @@ static void calculateWeightAndFlow(void) {
   } else {
     currentState.consideredFlow = 0.f;
     currentState.pumpCPS = getAndResetClickCounter();
+    getAndResetLoadAverage();
     flowTimer = millis();
   }
 }
@@ -795,6 +788,7 @@ static void modeDetect(void) {
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
   } else {
     currentState.pumpCPS = getAndResetClickCounter();
+    getAndResetLoadAverage();
     if (paramsReset) {
       brewParamsReset();
       paramsReset = false;

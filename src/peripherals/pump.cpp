@@ -12,7 +12,8 @@ float fpc_multiplier = 1.2f;
 
 int currentPumpValue = 0;
 int currentHeaterValue = 0;
-unsigned long controlTimer;
+float loadIntegral, heatIntegral;
+unsigned long controlTimer, loadStartTime, loadLastTime, heatStartTime, heatLastTime;
 
 float Pn [] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 float Ln [] = {0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.};
@@ -132,9 +133,14 @@ float getCurrentPumpLoad(void){
   return (float) currentPumpValue / (float) PUMP_RANGE;
 }
 
+float getCurrentHeaterLoad(void){
+  return (float) currentHeaterValue / (float) PUMP_RANGE;
+}
+
 void setPumpToPercentage(float percentage) {
   int newPumpValue = constrain((uint8_t) std::round(percentage * PUMP_RANGE), 0, PUMP_RANGE);
   if (currentPumpValue != newPumpValue){
+    updateLoadIntegral();
     currentPumpValue = newPumpValue;
     pump.set(newPumpValue);
   }
@@ -143,6 +149,7 @@ void setPumpToPercentage(float percentage) {
 void setHeaterToPercentage(float percentage) {
   int newHeaterValue = constrain((uint8_t) std::round(percentage * PUMP_RANGE), 0, PUMP_RANGE);
   if (currentHeaterValue != newHeaterValue){
+    updateHeaterIntegral();
     currentHeaterValue = newHeaterValue;
     pump.set2(newHeaterValue);
   }
@@ -202,4 +209,34 @@ void setPumpFlow(const float targetFlow, const float pressureRestriction, const 
     float pumpPct = getLoadForFlow(currentState.smoothedPressure, targetFlow);
     setPumpToPercentage(pumpPct);
   }
+}
+
+void updateLoadIntegral(unsigned long now){
+  loadIntegral += getCurrentPumpLoad() * (now - loadLastTime);
+  loadLastTime = now;
+}
+
+float getAndResetLoadAverage(void){
+  unsigned long now = micros();
+  updateLoadIntegral(now);
+  float avgLoad = loadIntegral / (float) (now - loadStartTime);
+  loadIntegral = 0.f;
+  loadLastTime = now;
+  loadStartTime = now;
+  return avgLoad;
+}
+
+void updateHeaterIntegral(unsigned long now){
+  heatIntegral += getCurrentHeaterLoad() * (now - heatLastTime);
+  heatLastTime = now;
+}
+
+float getAndResetHeaterAverage(void){
+  unsigned long now = micros();
+  updateHeaterIntegral(now);
+  float avgHeat = heatIntegral / (float) (now - heatStartTime);
+  heatIntegral = 0.f;
+  heatLastTime = now;
+  heatStartTime = now;
+  return avgHeat;
 }

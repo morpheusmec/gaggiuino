@@ -17,6 +17,7 @@ void setPumpPressure(const float targetPressure, const float flowRestriction, co
 void setPumpOff(void);
 void setPumpFullOn(void);
 float getCurrentPumpLoad(void);
+float getCurrentHeaterLoad(void);
 void setPumpToPercentage(const float percentage);
 void setHeaterToPercentage(const float percentage);
 long  getAndResetClickCounter(void);
@@ -27,4 +28,8 @@ float getPumpFlow(const float pressure, const float cps);
 // float getPumpFlowPerClick(const float pressure);
 float getLoadForFlow(const float pressure, const float flow);
 void setPumpFlow(const float targetFlow, const float pressureRestriction, const SensorState &currentState);
+void updateLoadIntegral(unsigned long now = micros());
+float getAndResetLoadAverage(void);
+void updateHeaterIntegral(unsigned long now = micros());
+float getAndResetHeaterAverage(void);
 #endif
