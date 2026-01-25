@@ -49,21 +49,24 @@ bool Phase::isStopConditionReached(SensorState& currentState, uint32_t timeInSho
 /**
   * The method below predicts if we should already consider the condition achieved when we have a slow reaction time
   */
-inline bool predictTargerAchieved(const float targetValue, const float currentValue, const float changeSpeed, const float reactionTime = 0.f) {
-  if (changeSpeed == 0.f) { // protecting against zero speeds
+inline bool predictTargetAchieved(const float targetValue, const float currentValue, const float changeSpeed, const float reactionTime = 0.f) {
+  if (currentValue >= targetValue) {
+    return true;
+  }
+
+  if (changeSpeed <= 0.f) {
     return currentValue == targetValue;
   }
 
   float remainingDose = targetValue - currentValue;
   float secondsRemaining = remainingDose / changeSpeed; // g / (g/sec) -> sec ;
 
-  return secondsRemaining < reactionTime ? true : false;
+  return secondsRemaining < reactionTime;
 }
 
 bool PhaseStopConditions::isReached(SensorState& state, long timeInShot, ShotSnapshot stateAtPhaseStart) const {
   auto stopOn = this;
   uint32_t timeInPhase = timeInShot - stateAtPhaseStart.timeInShot;
-  float flow = state.weight > 0.4f ? state.smoothedWeightFlow : state.smoothedPumpFlow;
   float currentWaterPumpedInPhase = state.waterPumped - stateAtPhaseStart.waterPumped;
 
   return (stopOn->time >= 0L && timeInPhase >= static_cast<uint32_t>(stopOn->time)) ||
@@ -83,7 +86,7 @@ bool GlobalStopConditions::isReached(const SensorState& state, uint32_t timeInSh
   auto stopOn = this;
   float flow = state.weight > 0.4f ? state.smoothedWeightFlow : state.smoothedPumpFlow;
 
-  return (stopOn->weight > 0.f && predictTargerAchieved(stopOn->weight, state.shotWeight, flow, 0.5f)) ||
+  return (stopOn->weight > 0.f && predictTargetAchieved(stopOn->weight, state.shotWeight, flow, 0.5f)) ||
     (stopOn->waterPumped > 0.f && state.waterPumped > stopOn->waterPumped) ||
     (stopOn->time > 0L && timeInShot >= stopOn->time);
 }

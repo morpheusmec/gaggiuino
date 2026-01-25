@@ -89,7 +89,7 @@ void loop(void) {
   relaysActuate();
   modeSelect();
   lcdRefresh();
-  sysHealthCheck(SYS_PRESSURE_IDLE);
+  sysHealthCheck();
 }
 
 //##############################################################################################################################
@@ -215,7 +215,7 @@ static void sensorsReadWeight(void) {
 
       if (currentState.brewActive) {
         currentState.shotWeight = currentState.tarePending ? 0.f : currentState.weight;
-        currentState.weightFlow = fmax(0.f, weightMeasurements.measurementChange().changeSpeed());
+        currentState.weightFlow = weightMeasurements.measurementChange().changeSpeed();
         currentState.smoothedWeightFlow = smoothScalesFlow.updateEstimate(currentState.weightFlow);
       }
     }
@@ -814,6 +814,9 @@ static void brewParamsReset(void) {
 
   weightMeasurements.clear();
   predictiveWeight.reset();
+  smoothPumpFlow.resetEstimate();
+  smoothScalesFlow.resetEstimate();
+  smoothConsideredFlow.resetEstimate();
   phaseProfiler.reset();
 }
 
@@ -823,7 +826,7 @@ static unsigned long getTimeSinceInit(void) {
   return millis() - startTime;
 }
 
-static inline void sysHealthCheck(float pressureThreshold) {
+static inline void sysHealthCheck() {
   //Reloading the watchdog timer, if this function fails to run MCU is rebooted
   watchdogReload();
 

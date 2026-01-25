@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "internal_watchdog.h"
 
-PSM2 pump(zcPin, pumpPin, heaterPin, PUMP_RANGE, ZC_MODE, 1, 1, 6);
+PSM2 pump(zcPin, pumpPin, heaterPin, PUMP_RANGE, ZC_MODE, 1, 1, 6, 80);
 
 int maxPumpClicksPerSecond = 50;
 float fpc_multiplier = 1.2f;

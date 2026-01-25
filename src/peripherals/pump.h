@@ -5,10 +5,10 @@
 #include <Arduino.h>
 #include "sensors_state.h"
 
-#define ZC_MODE    FALLING
+#define ZC_MODE    RISING
 #define between(x,a,b) ( b>a ? (x>=a)&&(x<=b) : (x>=b)&&(x<=a))
 
-constexpr uint8_t PUMP_RANGE = 250;
+constexpr uint8_t PUMP_RANGE = 240;
 
 float findQ(float p, float l);
 float findL(float p, float q);
