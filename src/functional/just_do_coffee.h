@@ -6,8 +6,10 @@
 #include "../peripherals/peripherals.h"
 #include "../peripherals/pump.h"
 #include "../eeprom_data/eeprom_data.h"
+#include "../log.h"
 #include "sensors_state.h"
 #include <Arduino.h>
+#include "PIDController.h"
 
 
 const uint32_t STEAM_TIMEOUT = 180000UL; // steam mode timeout
@@ -22,13 +24,14 @@ enum class HEATING {
   MODE_hotWater
 };
 
-void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState);
+void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState);
 void pulseHeaters(const uint32_t pulseLength, const float factor_1, const float factor_2, const bool brewActive);
 void setHeatersPower(const uint32_t cicleLength, const float powerFactor);
 void setBoilerOn();
 void setBoilerOff();
 void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState);
 void hotWaterMode(SensorState &currentState);
+void resetHeating(void);
 
 #endif
 

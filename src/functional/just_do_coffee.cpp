@@ -3,6 +3,20 @@
 #include "../lcd/lcd.h"
 
 unsigned long steamTime;
+float heatAdded;
+uint32_t lastHeatTime;
+PIDController controller(
+  0.05f, 
+  0.f,
+  0.f
+);
+
+void resetHeating(void){
+  controller.reset();
+  heatAdded = 0.f;
+  lastHeatTime = micros();
+}
+
 // inline static float TEMP_DELTA(float d) { return (d*DELTA_RANGE); }
 inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   return (
@@ -13,28 +27,22 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   );
 }
 
-void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentState) {
+void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState) {
   lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
   float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
   float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
+  uint32_t heatTime = micros();
+  float elapsedTime = (heatTime - lastHeatTime) / 1000000.f;
+  lastHeatTime = heatTime;
 
-  if (currentState.brewActive) { //if brewState == true
-    if(sensorTemperature <= brewTempSetPoint - 5.f) {
-      setBoilerOn();
-    } else {
-      float deltaOffset = 0.f;
-      if (runningCfg.brewDeltaState) {
-        float tempDelta = TEMP_DELTA(brewTempSetPoint, currentState);
-        float BREW_TEMP_DELTA = mapRange(sensorTemperature, brewTempSetPoint, brewTempSetPoint + tempDelta, tempDelta, 0, 0);
-        deltaOffset = constrain(BREW_TEMP_DELTA, 0, tempDelta);
-      }
-      if (sensorTemperature <= brewTempSetPoint + deltaOffset) {
-        // pulseHeaters(runningCfg.hpwr, (float)runningCfg.mainDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
-        setHeatersPower(runningCfg.hpwr, (float)runningCfg.brewDivider / 100.f);
-      } else {
-        setBoilerOff();
-      }
-    }
+
+
+  if (currentState.brewActive) {
+    heatAdded += getCurrentHeaterLoad() * elapsedTime;
+    float pidHeat = controller.calculate(brewTempSetPoint, sensorTemperature, elapsedTime);
+    float heatPower = currentState.smoothedPumpFlow * (0.18f + pidHeat);
+    heatPower = constrain(heatPower + 0.02f + pidHeat * 2, 0.f, 1.f);
+    (sensorTemperature >= brewTempSetPoint + 10.f) ? setBoilerOff() : setHeatersPower(runningCfg.hpwr, heatPower);
   } else if (currentState.flushActive){
     (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
   } else if (!currentState.steamActive && !currentState.hotWaterActive){ //if brewState == false
@@ -43,9 +51,12 @@ void justDoCoffee(const eepromValues_t &runningCfg, const SensorState &currentSt
     } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
       // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
       setHeatersPower(runningCfg.hpwr, 0.6f);
-    } else if (sensorTemperature < ((float)brewTempSetPoint)) {
+    } else if (sensorTemperature < ((float)brewTempSetPoint) - 0.5f) {
       // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
       setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
+    } else if (sensorTemperature < ((float)brewTempSetPoint)) {
+      // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
+      setHeatersPower(runningCfg.hpwr, 0.04f);
     } else {
       setBoilerOff();
     }

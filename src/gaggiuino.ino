@@ -805,6 +805,7 @@ static void brewParamsReset(void) {
   brewingTimer             = millis();
   flowTimer                = brewingTimer;
   systemHealthTimer        = brewingTimer + HEALTHCHECK_EVERY;
+  resetHeating();
 
   weightMeasurements.clear();
   predictiveWeight.reset();
