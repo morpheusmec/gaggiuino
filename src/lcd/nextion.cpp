@@ -164,20 +164,17 @@ void lcdUploadCfg(eepromValues_t &eepromCurrentValues) {
 
   // More brew settings
   myNex.writeNum("bckHome", eepromCurrentValues.homeOnShotFinish);
-  myNex.writeNum("basketPrefill", eepromCurrentValues.basketPrefill);
-  myNex.writeNum("deltaState", eepromCurrentValues.brewDeltaState);
+  myNex.writeNum("bS.homeTime.val", eepromCurrentValues.hpwr);
 
   // System settings
   myNex.writeNum("sT.steamSetPoint.val", eepromCurrentValues.steamSetPoint);
   myNex.writeNum("sT.offSet.val", eepromCurrentValues.offsetTemp);
-  myNex.writeNum("sT.hpwr.val", eepromCurrentValues.hpwr);
-  myNex.writeNum("sT.mDiv.val", eepromCurrentValues.mainDivider);
-  myNex.writeNum("sT.bDiv.val", eepromCurrentValues.brewDivider);
+  myNex.writeNum("sT.midHeat.val", eepromCurrentValues.mainDivider);
+  myNex.writeNum("sT.lowHeat.val", eepromCurrentValues.brewDivider);
 
   myNex.writeNum("sP.n1.val", eepromCurrentValues.lcdSleep);
   myNex.writeNum("sP.lc1.val", eepromCurrentValues.scalesF1);
   myNex.writeNum("sP.lc2.val", eepromCurrentValues.scalesF2);
-  myNex.writeNum("sP.pump_zero.val", eepromCurrentValues.pumpFlowAtZero * 10000.f);
   myNex.writeNum("warmupState", eepromCurrentValues.warmupState);
 
   // Led
@@ -399,16 +396,14 @@ void lcdFetchCurrentProfile(eepromValues_t & settings) {
 void lcdFetchBrewSettings(eepromValues_t &settings) {
   // More brew settings
   settings.homeOnShotFinish               = myNex.readNumber("bckHome");
-  settings.basketPrefill                  = myNex.readNumber("basketPrefill");
-  settings.brewDeltaState                 = myNex.readNumber("deltaState");
+  settings.hpwr                           = myNex.readNumber("bS.homeTime.val");
 }
 
 void lcdFetchBoiler(eepromValues_t &settings) {
   settings.steamSetPoint                  = myNex.readNumber("sT.steamSetPoint.val");
   settings.offsetTemp                     = myNex.readNumber("sT.offSet.val");
-  settings.hpwr                           = myNex.readNumber("sT.hpwr.val");
-  settings.mainDivider                    = myNex.readNumber("sT.mDiv.val");
-  settings.brewDivider                    = myNex.readNumber("sT.bDiv.val");
+  settings.mainDivider                    = myNex.readNumber("sT.midHeat.val");
+  settings.brewDivider                    = myNex.readNumber("sT.lowHeat.val");
 }
 
 void lcdFetchSystem(eepromValues_t &settings) {
@@ -417,7 +412,6 @@ void lcdFetchSystem(eepromValues_t &settings) {
   settings.warmupState                    = myNex.readNumber("warmupState");
   settings.scalesF1                       = myNex.readNumber("sP.lc1.val");
   settings.scalesF2                       = myNex.readNumber("sP.lc2.val");
-  settings.pumpFlowAtZero                 = myNex.readNumber("sP.pump_zero.val") / 10000.f;
 }
 
 void lcdFetchLed(eepromValues_t &settings) {
