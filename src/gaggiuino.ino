@@ -65,10 +65,6 @@ void setup(void) {
   scalesInit(runningCfg.scalesF1);
   LOG_INFO("Scales init");
 
-  // Pump init
-  pumpInit(runningCfg.powerLineFrequency);
-  LOG_INFO("Pump init");
-
   pageValuesRefresh();
   LOG_INFO("Setup sequence finished");
 

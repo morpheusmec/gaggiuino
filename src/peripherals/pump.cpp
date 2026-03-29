@@ -7,9 +7,6 @@
 
 PSM2 pump(zcPin, pumpPin, heaterPin, PUMP_RANGE, ZC_MODE, 1, 1, 6, 80);
 
-int maxPumpClicksPerSecond = 50;
-float fpc_multiplier = 1.2f;
-
 int currentPumpValue = 0;
 int currentHeaterValue = 0;
 float loadIntegral, heatIntegral;
@@ -74,14 +71,6 @@ float findL(float p, float q)
   return l;
 }
 
-// Initialising some pump specific specs, mainly:
-// - max pump clicks(dependant on region power grid spec)
-// - pump clicks at 0 pressure in the system
-void pumpInit(const int powerLineFrequency) {
-  // pump.freq = powerLineFrequency;
-  maxPumpClicksPerSecond = powerLineFrequency;
-  fpc_multiplier = 60.f / (float)maxPumpClicksPerSecond;
-}
 
 // Function that returns the percentage of clicks the pump makes in it's current phase
 inline float getPumpPct(const float targetPressure, const float flowRestriction, const SensorState &currentState) {
@@ -189,9 +178,6 @@ void pumpPhaseShift(void) {
 //   return findQ(pressure, (float)currentPumpValue / (float)PUMP_RANGE * (float)maxPumpClicksPerSecond);
 // }
 
-float getPumpFlow(const float pressure, const float cps) {
-  return findQ(pressure, cps / (float) maxPumpClicksPerSecond);
-}
 
 float getLoadForFlow(const float pressure, const float flow) {
   if (flow == 0.f) return 0;

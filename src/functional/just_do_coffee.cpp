@@ -42,21 +42,18 @@ void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState) {
     float pidHeat = controller.calculate(brewTempSetPoint, sensorTemperature, elapsedTime);
     float heatPower = currentState.smoothedPumpFlow * (0.18f + pidHeat);
     heatPower = constrain(heatPower + 0.02f + pidHeat * 2, 0.f, 1.f);
-    (sensorTemperature >= brewTempSetPoint + 10.f) ? setBoilerOff() : setHeatersPower(runningCfg.hpwr, heatPower);
+    (sensorTemperature >= brewTempSetPoint + 10.f) ? setBoilerOff() : setHeatersPower(heatPower);
   } else if (currentState.flushActive){
     (sensorTemperature <= brewTempSetPoint + 2) ? setBoilerOn() : setBoilerOff();
   } else if (!currentState.steamActive && !currentState.hotWaterActive){ //if brewState == false
     if (sensorTemperature <= ((float)brewTempSetPoint - 35.f)) {
-      setHeatersPower(runningCfg.hpwr, 1.f);
+      setHeatersPower(1.f);
     } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
-      // pulseHeaters(HPWR_OUT, 1.f, (float)runningCfg.mainDivider / 10.f, brewActive);
-      setHeatersPower(runningCfg.hpwr, 0.6f);
+      setHeatersPower((float)runningCfg.mainDivider / 100.f);  //keeping dividers names at first, although they mean something else
     } else if (sensorTemperature < ((float)brewTempSetPoint) - 0.5f) {
-      // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
-      setHeatersPower(runningCfg.hpwr, (float)runningCfg.mainDivider / 100.f);
+      setHeatersPower((float)runningCfg.brewDivider / 100.f);
     } else if (sensorTemperature < ((float)brewTempSetPoint)) {
-      // pulseHeaters(HPWR_OUT,  (float)runningCfg.brewDivider / 10.f, (float)runningCfg.brewDivider / 10.f, brewActive);
-      setHeatersPower(runningCfg.hpwr, 0.04f);
+      setHeatersPower(0.04f);
     } else {
       setBoilerOff();
     }
@@ -64,7 +61,7 @@ void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState) {
 
 }
 
-void setHeatersPower(const uint32_t cicleLength, const float powerFactor) {
+void setHeatersPower(const float powerFactor) {
   setHeaterToPercentage(powerFactor);
 }
 
@@ -98,7 +95,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   } else if (sensorTemperature > steamTempSetPoint + 5.f ) {
     setBoilerOff();
   } else if (sensorTemperature > steamTempSetPoint){
-      (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(runningCfg.hpwr, 0.85f) : setBoilerOff();
+      (readyToSteam && currentState.steamSwitchState) ? setHeatersPower(0.85f) : setBoilerOff();
   } else {
     setBoilerOn();
   }

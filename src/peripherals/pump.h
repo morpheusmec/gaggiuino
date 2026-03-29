@@ -12,7 +12,6 @@ constexpr uint8_t PUMP_RANGE = 240;
 
 float findQ(float p, float l);
 float findL(float p, float q);
-void pumpInit(const int powerLineFrequency);
 void setPumpPressure(const float targetPressure, const float flowRestriction, const SensorState &currentState);
 void setPumpOff(void);
 void setPumpFullOn(void);
@@ -24,8 +23,6 @@ long  getAndResetClickCounter(void);
 int getCPS(void);
 void pumpPhaseShift(void);
 void pumpStopAfter(const uint8_t val);
-float getPumpFlow(const float pressure, const float cps);
-// float getPumpFlowPerClick(const float pressure);
 float getLoadForFlow(const float pressure, const float flow);
 void setPumpFlow(const float targetFlow, const float pressureRestriction, const SensorState &currentState);
 void updateLoadIntegral(unsigned long now = micros());
