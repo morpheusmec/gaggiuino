@@ -44,6 +44,9 @@ void setup(void) {
   // Init the tof sensor
   currentState.waterLvl = 30u;
 
+  // Initialise comms library for talking to the ESP mcu
+  espCommsInit();
+
   // Initialising the saved values or writing defaults if first start
   eepromInit();
   runningCfg = eepromGetCurrentValues();
@@ -85,6 +88,7 @@ void loop(void) {
   relaysActuate();
   modeSelect();
   lcdRefresh();
+  espCommsSendSensorData(currentState, 100);
   sysHealthCheck();
 }
 
@@ -95,6 +99,7 @@ void loop(void) {
 
 static void sensorsRead(void) {
   sensorReadSwitches();
+  espCommsReadData();
   sensorsReadTemperature();
   sensorsReadWeight();
   sensorsReadPressure();
@@ -704,6 +709,8 @@ static void profiling(void) {
     uint32_t timeInShot = millis() - brewingTimer;
     phaseProfiler.updatePhase(timeInShot, currentState);
     CurrentPhase& currentPhase = phaseProfiler.getCurrentPhase();
+    ShotSnapshot shotSnapshot = buildShotSnapshot(timeInShot, currentState, currentPhase);
+    espCommsSendShotData(shotSnapshot, 100);
 
     if (phaseProfiler.isFinished()) {
       setPumpOff();
