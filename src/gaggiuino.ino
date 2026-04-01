@@ -212,7 +212,7 @@ static void sensorsReadWeight(void) {
       else {
         weightMeasurements.add(scalesGetWeight());
       }
-      currentState.weight = weightMeasurements.latest().value;
+      currentState.weight = abs(weightMeasurements.latest().value) > 0.3f ? weightMeasurements.latest().value : 0.f;
 
       if (currentState.brewActive) {
         currentState.shotWeight = currentState.tarePending ? 0.f : currentState.weight;
@@ -460,9 +460,13 @@ void lcdLoadDefaultProfileTrigger(void) {
   lcdShowPopup("Profile loaded!");
 }
 
-void lcdScalesTareTrigger(void) {
+void onTareReceived() {
   LOG_VERBOSE("Tare scales");
   if (currentState.scalesPresent) currentState.tarePending = true;
+}
+
+void lcdScalesTareTrigger(void) {
+  onTareReceived();
 }
 
 void lcdHomeScreenScalesTrigger(void) {

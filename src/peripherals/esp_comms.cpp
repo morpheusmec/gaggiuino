@@ -25,6 +25,7 @@ void espCommsInit() {
   McuCommsSingleton::getInstance().setProfileReceivedCallback(onProfileReceived);
   McuCommsSingleton::getInstance().setRemoteScalesWeightReceivedCallback(onRemoteScalesWeightReceived);
   McuCommsSingleton::getInstance().setRemoteScalesDisconnectedCallback(onRemoteScalesDisconnected);
+  McuCommsSingleton::getInstance().setTareCommandReceivedCallback(onTareReceived);
 }
 
 void espCommsReadData() {

@@ -34,6 +34,7 @@ enum class McuCommsMessageType : uint8_t {
   MCUC_CMD_REMOTE_SCALES_TARE = 11,
 
   MCUC_RESPONSE = 12,
+  MCUC_CMD_TARE = 13
 };
 
 enum class McuCommsResponseResult : uint8_t {
@@ -62,6 +63,7 @@ private:
   using RemoteScalesWeightReceivedCallback = std::function<void(float)>;
   using RemoteScalesTareCommandCallback = std::function<void()>;
   using RemoteScalesDisconnectedCallback = std::function<void()>;
+  using TareCommandReceivedCallback = std::function<void()>;
 
   uint32_t lastByteReceived = 0;
   uint32_t lastHeartbeatSent = 0;
@@ -74,6 +76,7 @@ private:
   RemoteScalesWeightReceivedCallback remoteScalesWeightReceivedCallback = nullptr;
   RemoteScalesTareCommandCallback remoteScalesTareCommandCallback = nullptr;
   RemoteScalesDisconnectedCallback remoteScalesDisconnectedCallback = nullptr;
+  TareCommandReceivedCallback tareCommandReceivedCallback = nullptr;
   Stream* debugPort = nullptr;
   size_t packetSize;
 
@@ -101,6 +104,7 @@ private:
   void remoteScalesWeightReceived(float weight) const;
   void remoteScalesTareCommandReceived() const;
   void remoteScalesDisconnected() const;
+  void tareCommandReceived() const;
 
 public:
   void begin(Stream& serial, uint32_t waitConnectionMillis = 0, size_t packetSize = MAX_DATA_PER_PACKET_DEFAULT);
@@ -112,6 +116,7 @@ public:
   void setRemoteScalesWeightReceivedCallback(RemoteScalesWeightReceivedCallback callback);
   void setRemoteScalesTareCommandCallback(RemoteScalesTareCommandCallback callback);
   void setRemoteScalesDisconnectedCallback(RemoteScalesDisconnectedCallback callback);
+  void setTareCommandReceivedCallback(TareCommandReceivedCallback callback);
 
   void sendShotData(const ShotSnapshot& snapshot);
   void sendProfile(Profile& profile);
@@ -120,6 +125,7 @@ public:
   void sendRemoteScalesWeight(float weight);
   void sendRemoteScalesTare();
   void sendRemoteScalesDisconnected();
+  void sendTareCommand();
 
   bool isConnected();
   void readDataAndTick();

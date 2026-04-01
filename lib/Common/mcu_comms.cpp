@@ -148,6 +148,13 @@ void McuComms::remoteScalesDisconnected() const {
   }
 }
 
+void McuComms::tareCommandReceived() const {
+  if (tareCommandReceivedCallback) {
+    tareCommandReceivedCallback();
+  }
+}
+
+
 void McuComms::responseReceived(McuCommsResponse& response) const {
   if (responseReceivedCallback) {
     responseReceivedCallback(response);
@@ -242,6 +249,10 @@ void McuComms::setRemoteScalesDisconnectedCallback(RemoteScalesDisconnectedCallb
   remoteScalesDisconnectedCallback = callback;
 }
 
+void McuComms::setTareCommandReceivedCallback(TareCommandReceivedCallback callback) {
+  tareCommandReceivedCallback = callback;
+}
+
 void McuComms::setResponseReceivedCallback(ResponseReceivedCallback callback) {
   responseReceivedCallback = callback;
 }
@@ -287,6 +298,12 @@ void McuComms::sendRemoteScalesDisconnected() {
   if (!isConnected()) return;
   uint16_t messageSize = transfer.txObj(static_cast<uint8_t>(McuCommsMessageType::MCUC_DATA_REMOTE_SCALES_DISCONNECTED));
   transfer.sendData(messageSize, static_cast<uint8_t>(McuCommsMessageType::MCUC_DATA_REMOTE_SCALES_DISCONNECTED));
+}
+
+void McuComms::sendTareCommand() {
+  if (!isConnected()) return;
+  uint16_t messageSize = transfer.txObj(static_cast<uint8_t>(McuCommsMessageType::MCUC_CMD_TARE));
+  transfer.sendData(messageSize, static_cast<uint8_t>(McuCommsMessageType::MCUC_CMD_TARE));
 }
 
 void McuComms::readDataAndTick() {
@@ -336,6 +353,10 @@ void McuComms::readDataAndTick() {
     } case McuCommsMessageType::MCUC_DATA_REMOTE_SCALES_DISCONNECTED: {
       log("Received scales disconnected message");
       remoteScalesDisconnected();
+      break;
+    } case McuCommsMessageType::MCUC_CMD_TARE: {
+      log("Received tare command");
+      tareCommandReceived();
       break;
     }
     default:

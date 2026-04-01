@@ -15,5 +15,6 @@ void espCommsSendTareScalesCommand();
 void onProfileReceived(Profile& profile);
 void onRemoteScalesWeightReceived(float weight);
 void onRemoteScalesDisconnected();
+void onTareReceived();
 
 #endif
