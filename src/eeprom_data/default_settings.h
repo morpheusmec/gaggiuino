@@ -15,21 +15,21 @@ GaggiaSettings getDefaultGaggiaSettings(void) {
   }
 
   // Boiler
-  defaultData.boiler.steamSetPoint = 155;
-  defaultData.boiler.offsetTemp = 7;
-  defaultData.boiler.hpwr = 550;
-  defaultData.boiler.mainDivider = 5;
-  defaultData.boiler.brewDivider = 3;
+  defaultData.boiler.steamSetPoint = 165;
+  defaultData.boiler.offsetTemp = 3;
+  defaultData.boiler.hpwr = 10;
+  defaultData.boiler.mainDivider = 70;
+  defaultData.boiler.brewDivider = 30;
 
   // Screen
-  defaultData.brew.homeOnShotFinish = false;
-  defaultData.brew.brewDeltaState = true;
+  defaultData.brew.homeOnShotFinish = true;
+  defaultData.brew.brewDeltaState = false;
   defaultData.brew.basketPrefill = false;
 
   // System settings
-  defaultData.system.powerLineFrequency = 50;
-  defaultData.system.scalesF1 = 3920;
-  defaultData.system.scalesF2 = 4210;
+  defaultData.system.powerLineFrequency = 60;
+  defaultData.system.scalesF1 = 1010;
+  defaultData.system.scalesF2 = 1010;
   defaultData.system.pumpFlowAtZero = 0.2401f;
   defaultData.system.lcdSleep = 16;
   defaultData.system.warmupState = false;
