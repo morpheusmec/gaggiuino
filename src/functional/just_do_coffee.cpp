@@ -27,10 +27,10 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   );
 }
 
-void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState) {
+void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState) {
   lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
-  float brewTempSetPoint = ACTIVE_PROFILE(runningCfg).setpoint + runningCfg.offsetTemp;
-  float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
+  float brewTempSetPoint = ACTIVE_PROFILE(settings).waterTemperature + settings.boiler.offsetTemp;
+  float sensorTemperature = currentState.temperature + settings.boiler.offsetTemp;
   uint32_t heatTime = micros();
   float elapsedTime = (heatTime - lastHeatTime) / 1000000.f;
   lastHeatTime = heatTime;
@@ -49,9 +49,9 @@ void justDoCoffee(const eepromValues_t &runningCfg, SensorState &currentState) {
     if (sensorTemperature <= ((float)brewTempSetPoint - 35.f)) {
       setHeatersPower(1.f);
     } else if (sensorTemperature <= ((float)brewTempSetPoint - 20.f)) {
-      setHeatersPower((float)runningCfg.mainDivider / 100.f);  //keeping dividers names at first, although they mean something else
+      setHeatersPower((float)settings.boiler.mainDivider / 100.f);  //keeping dividers names at first, although they mean something else
     } else if (sensorTemperature < ((float)brewTempSetPoint) - 0.5f) {
-      setHeatersPower((float)runningCfg.brewDivider / 100.f);
+      setHeatersPower((float)settings.boiler.brewDivider / 100.f);
     } else if (sensorTemperature < ((float)brewTempSetPoint)) {
       setHeatersPower(0.04f);
     } else {
@@ -76,11 +76,11 @@ void setBoilerOff(){
 //#############################################################################################
 //################################____STEAM_POWER_CONTROL____##################################
 //#############################################################################################
-void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
+void steamCtrl(const GaggiaSettings &settings, SensorState &currentState) {
   currentState.steamActive ? lcdTargetState((int)HEATING::MODE_steam) : lcdTargetState((int)HEATING::MODE_brew); // setting the steam/hot water target temp
   // steam temp control, needs to be aggressive to keep steam pressure acceptable
-  float steamTempSetPoint = runningCfg.steamSetPoint + runningCfg.offsetTemp;
-  float sensorTemperature = currentState.temperature + runningCfg.offsetTemp;
+  float steamTempSetPoint = settings.boiler.steamSetPoint + settings.boiler.offsetTemp;
+  float sensorTemperature = currentState.temperature + settings.boiler.offsetTemp;
   static bool readyToSteam = false;
   static bool flushingStarted = false;
   static uint32_t flushStartTime;
@@ -103,7 +103,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   if (!flushingStarted && !currentState.steamSwitchState && (currentState.brewSwitchState || currentState.flushSwitchState)){
     flushingStarted = true;
     flushStartTime = millis();
-    flushingDeltaT = fmax(0, currentState.temperature - ACTIVE_PROFILE(runningCfg).setpoint);
+    flushingDeltaT = fmax(0, currentState.temperature - ACTIVE_PROFILE(settings).waterTemperature);
     currentState.brewSwitchState = false;
     currentState.flushSwitchState = false;
 
@@ -127,7 +127,7 @@ void steamCtrl(const eepromValues_t &runningCfg, SensorState &currentState) {
   }
 
   /*In case steam is forgotten ON for more than 3 min*/
-  if (millis() - steamTime >= STEAM_TIMEOUT && currentState.temperature < ACTIVE_PROFILE(runningCfg).setpoint){
+  if (millis() - steamTime >= STEAM_TIMEOUT && currentState.temperature < ACTIVE_PROFILE(settings).waterTemperature){
     currentState.steamActive = false;
     readyToSteam = false;
     flushingStarted = false;

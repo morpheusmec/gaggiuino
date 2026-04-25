@@ -11,13 +11,13 @@ uint8_t counter = 0;
 unsigned long descalingTimer = 0;
 int descalingCycle = 0;
 
-void deScale(eepromValues_t &runningCfg, SensorState &currentState) {
+void deScale(GaggiaSettings &settings, SensorState &currentState) {
   float pumpSpeed = 1./3.;
   uint16_t time_each = 10000;
   switch (descalingState) {
     case DescalingState::IDLE: // Waiting for fuckfest to begin
       if (currentState.brewSwitchState) {
-        ACTIVE_PROFILE(runningCfg).setpoint = 70;
+        ACTIVE_PROFILE(settings).waterTemperature = 70;
         descalingState = DescalingState::DESCALING_PHASE1;
         descalingCycle = 0;
         descalingTimer = millis();
@@ -127,7 +127,7 @@ void deScale(eepromValues_t &runningCfg, SensorState &currentState) {
       }
       break;
   }
-  justDoCoffee(runningCfg, currentState);
+  justDoCoffee(settings, currentState);
 }
 
 void solenoidBeat3W() {
