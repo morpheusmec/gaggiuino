@@ -33,6 +33,4 @@ GaggiaSettings eepromGetCurrentSettings(void);
 
 #define ACTIVE_PROFILE(settings) settings.profiles.savedProfiles[settings.profiles.activeProfileIndex]
 
-bool upgradeSchema_latest(BaseValues_t& source, BaseValues_t& target);
-
 #endif
