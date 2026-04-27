@@ -27,9 +27,9 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
   );
 }
 
-void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState) {
+void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState,  float waterTemperature) {
   lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
-  float brewTempSetPoint = ACTIVE_PROFILE(settings).waterTemperature + settings.boiler.offsetTemp;
+  float brewTempSetPoint = waterTemperature + settings.boiler.offsetTemp;
   float sensorTemperature = currentState.temperature + settings.boiler.offsetTemp;
   uint32_t heatTime = micros();
   float elapsedTime = (heatTime - lastHeatTime) / 1000000.f;
@@ -76,7 +76,7 @@ void setBoilerOff(){
 //#############################################################################################
 //################################____STEAM_POWER_CONTROL____##################################
 //#############################################################################################
-void steamCtrl(const GaggiaSettings &settings, SensorState &currentState) {
+void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float iddleWaterTemperature) {
   currentState.steamActive ? lcdTargetState((int)HEATING::MODE_steam) : lcdTargetState((int)HEATING::MODE_brew); // setting the steam/hot water target temp
   // steam temp control, needs to be aggressive to keep steam pressure acceptable
   float steamTempSetPoint = settings.boiler.steamSetPoint + settings.boiler.offsetTemp;
@@ -103,7 +103,7 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState) {
   if (!flushingStarted && !currentState.steamSwitchState && (currentState.brewSwitchState || currentState.flushSwitchState)){
     flushingStarted = true;
     flushStartTime = millis();
-    flushingDeltaT = fmax(0, currentState.temperature - ACTIVE_PROFILE(settings).waterTemperature);
+    flushingDeltaT = fmax(0, currentState.temperature - iddleWaterTemperature);
     currentState.brewSwitchState = false;
     currentState.flushSwitchState = false;
 
@@ -127,7 +127,7 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState) {
   }
 
   /*In case steam is forgotten ON for more than 3 min*/
-  if (millis() - steamTime >= STEAM_TIMEOUT && currentState.temperature < ACTIVE_PROFILE(settings).waterTemperature){
+  if (millis() - steamTime >= STEAM_TIMEOUT && currentState.temperature < iddleWaterTemperature){
     currentState.steamActive = false;
     readyToSteam = false;
     flushingStarted = false;

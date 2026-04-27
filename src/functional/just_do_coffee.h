@@ -24,11 +24,11 @@ enum class HEATING {
   MODE_hotWater
 };
 
-void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState);
+void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState, float waterTemperature);
 void setHeatersPower(const float powerFactor);
 void setBoilerOn();
 void setBoilerOff();
-void steamCtrl(const GaggiaSettings &settings, SensorState &currentState);
+void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float iddleWaterTemperature);
 void hotWaterMode(SensorState &currentState);
 void resetHeating(void);
 

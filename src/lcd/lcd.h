@@ -30,15 +30,15 @@ extern volatile NextionPage lcdLastCurrentPageId;
 
 void lcdInit(void);
 bool lcdCheckSerialInit(const char* expectedOutput, size_t expectedLen);
-void lcdUploadProfile(GaggiaSettings& settings);
-void lcdUploadCfg(GaggiaSettings& settings);
-void uploadPageCfg(GaggiaSettings& settings, SystemState &sys);
+void lcdUploadProfile(const Profile& profile, int profileidx);
+void lcdUploadCfg(GaggiaSettings& settings, ProfileSettings& profiles);
+void uploadPageCfg(GaggiaSettings& settings, ProfileSettings& profiles, Profile& profile, SystemState& sys);
 void lcdListen(void);
 void lcdWakeUp(void);
 
-void lcdFetchCurrentProfile(GaggiaSettings& settings);
+void lcdFetchCurrentProfile(GaggiaSettings& settings, ProfileSettings& profiles);
 void lcdFetchLed(GaggiaSettings& settings);
-void lcdFetchPage(GaggiaSettings& settings, NextionPage page, int targetProfile);
+void lcdFetchPage(GaggiaSettings& settings, ProfileSettings& profiles, NextionPage page);
 uint8_t lcdGetSelectedProfile(void);
 bool lcdGetPreinfusionFlowState(void);
 bool lcdGetProfileFlowState(void);

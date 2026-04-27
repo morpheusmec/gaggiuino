@@ -13,8 +13,14 @@ SimpleKalmanFilter smoothScalesFlow(0.5f, 0.5f, 0.01f);
 SimpleKalmanFilter smoothConsideredFlow(0.1f, 0.1f, 0.1f);
 
 //default phases. Updated in updateProfilerPhases.
-Profile profile;
-PhaseProfiler phaseProfiler{profile};
+bool gaggiaSettingsInitialised = false;
+bool activeProfileInitialized = false;
+
+ProfileSettings profileSettings;
+Profile manualProfile;
+Profile activeProfile;
+
+PhaseProfiler phaseProfiler{activeProfile};
 
 PredictiveWeight predictiveWeight;
 
@@ -45,7 +51,7 @@ void setup(void) {
   #endif
 
   // Init the tof sensor
-  currentState.waterLvl = 30u;
+  currentState.waterLevel = 30u;
 
   // Initialise comms library for talking to the ESP mcu
   espCommsInit();
@@ -53,6 +59,8 @@ void setup(void) {
   // Initialising the saved values or writing defaults if first start
   eepromInit();
   runningCfg = eepromGetCurrentSettings();
+  profileSettings = eepromGetCurrentProfiles();
+  activeProfile = profileSettings.savedProfiles[profileSettings.activeProfileIndex];
   LOG_INFO("EEPROM Init");
 
   cpsInit(runningCfg);
@@ -61,7 +69,7 @@ void setup(void) {
   thermocoupleInit();
   LOG_INFO("Thermocouple Init");
 
-  lcdUploadCfg(runningCfg);
+  lcdUploadCfg(runningCfg, profileSettings);
   LOG_INFO("LCD cfg uploaded");
 
   adsInit();
@@ -295,11 +303,11 @@ static void calculateWeightAndFlow(void) {
 //##############################################################################################################################
 static void pageValuesRefresh() {
   // Read the page we're landing in: leaving keyboard page means a value could've changed in it
-  if (lcdLastCurrentPageId == NextionPage::KeyboardNumeric) lcdFetchPage(runningCfg, lcdCurrentPageId, runningCfg.profiles.activeProfileIndex);
+  if (lcdLastCurrentPageId == NextionPage::KeyboardNumeric) lcdFetchPage(runningCfg, profileSettings, lcdCurrentPageId);
   // Or maybe it's a page that needs constant polling
-  else if (lcdLastCurrentPageId == NextionPage::Led) lcdFetchPage(runningCfg, lcdCurrentPageId, runningCfg.profiles.activeProfileIndex);
+  else if (lcdLastCurrentPageId == NextionPage::Led) lcdFetchPage(runningCfg, profileSettings, lcdCurrentPageId);
   // Finally read the page we left, as it could've been changed in place (e.g. boolean toggles)
-  else lcdFetchPage(runningCfg, lcdLastCurrentPageId, runningCfg.profiles.activeProfileIndex);
+  else lcdFetchPage(runningCfg, profileSettings, lcdLastCurrentPageId);
 
   homeScreenScalesEnabled = lcdGetHomeScreenScalesEnabled();
   // MODE_SELECT should always be LAST
@@ -325,7 +333,7 @@ static void modeSelect(void) {
     case OPERATION_MODES::OPMODE_everythingFlowProfiled:
     case OPERATION_MODES::OPMODE_pressureBasedPreinfusionAndFlowProfile:
       if (currentState.hotWaterActive) hotWaterMode(currentState);
-      else if (currentState.steamActive) steamCtrl(runningCfg, currentState);
+      else if (currentState.steamActive) steamCtrl(runningCfg, currentState, activeProfile.waterTemperature);
       else {
         profiling();
       }
@@ -335,10 +343,10 @@ static void modeSelect(void) {
       break;
     case OPERATION_MODES::OPMODE_flush:
       backFlush(currentState);
-      justDoCoffee(runningCfg, currentState);
+      justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
       break;
     case OPERATION_MODES::OPMODE_steam:
-      steamCtrl(runningCfg, currentState);
+      steamCtrl(runningCfg, currentState, activeProfile.waterTemperature);
       break;
     case OPERATION_MODES::OPMODE_descale:
       deScale(runningCfg, currentState);
@@ -380,7 +388,7 @@ static void lcdRefresh(void) {
         tempDecimal = (currentState.waterTemperature - (uint16_t)currentState.waterTemperature) * 10;
         lcdSetTemperatureDecimal(tempDecimal);
         // water lvl
-        lcdSetTankWaterLvl(currentState.waterLvl);
+        lcdSetTankWaterLvl(currentState.waterLevel);
         //weight
         if (homeScreenScalesEnabled) lcdSetWeight(currentState.weight);
         break;
@@ -417,8 +425,8 @@ static void lcdRefresh(void) {
 //#############################################################################################
 //###################################____SAVE_BUTTON____#######################################
 //#############################################################################################
-void tryEepromWrite(const GaggiaSettings& settings) {
-  bool success = eepromWrite(settings);
+void tryEepromWrite(const GaggiaSettings& settings, const ProfileSettings& profileSettings) {
+  bool success = eepromWrite(settings, profileSettings);
   watchdogReload(); // reload the watchdog timer on expensive operations
   if (success) {
     lcdShowPopup("Update successful!");
@@ -427,34 +435,37 @@ void tryEepromWrite(const GaggiaSettings& settings) {
   }
 }
 
-void lcdSwitchActiveToStoredProfile(const GaggiaSettings& storedSettings) {
-  runningCfg.profiles.activeProfileIndex = lcdGetSelectedProfile();
-  ACTIVE_PROFILE(runningCfg) = storedSettings.profiles.savedProfiles[runningCfg.profiles.activeProfileIndex];
-  lcdUploadProfile(runningCfg);
+void lcdSwitchActiveToStoredProfile(ProfileSettings& storedProfiles) {
+  storedProfiles.activeProfileIndex = lcdGetSelectedProfile();
+  activeProfile = storedProfiles.savedProfiles[storedProfiles.activeProfileIndex];
+  lcdUploadProfile(activeProfile, storedProfiles.activeProfileIndex);
 }
 
 // Save the desired temp values to EEPROM
 void lcdSaveSettingsTrigger(void) {
   LOG_VERBOSE("Saving values to EEPROM");
   GaggiaSettings eepromCurrentValues = eepromGetCurrentSettings();
-  lcdFetchPage(eepromCurrentValues, lcdCurrentPageId, runningCfg.profiles.activeProfileIndex);
-  tryEepromWrite(eepromCurrentValues);
+  lcdFetchPage(eepromCurrentValues, profileSettings, lcdCurrentPageId);
+  activeProfile =profileSettings.savedProfiles[profileSettings.activeProfileIndex];
+  tryEepromWrite(eepromCurrentValues, profileSettings);
 }
 
 void lcdSaveProfileTrigger(void) {
   LOG_VERBOSE("Saving profile to EEPROM");
 
   GaggiaSettings currentSettings = eepromGetCurrentSettings();
-  lcdFetchCurrentProfile(currentSettings);
-  tryEepromWrite(currentSettings);
+  lcdFetchCurrentProfile(currentSettings, profileSettings);
+  activeProfile = profileSettings.savedProfiles[profileSettings.activeProfileIndex];
+  tryEepromWrite(currentSettings, profileSettings);
 }
 
 void lcdResetSettingsTrigger(void) {
-  tryEepromWrite(eepromGetDefaultSettings());
+  tryEepromWrite(eepromGetDefaultSettings(), eepromGetDefaultProfiles());
 }
 
 void lcdLoadDefaultProfileTrigger(void) {
-  lcdSwitchActiveToStoredProfile(eepromGetDefaultSettings());
+  ProfileSettings defaultProfiles = eepromGetDefaultProfiles();
+  lcdSwitchActiveToStoredProfile(defaultProfiles);
 
   lcdShowPopup("Profile loaded!");
 }
@@ -486,29 +497,62 @@ void lcdBrewGraphScalesTareTrigger(void) {
 
 void lcdRefreshElementsTrigger(void) {
   GaggiaSettings eepromCurrentSettings = eepromGetCurrentSettings();
-
   // Make the necessary changes
-  uploadPageCfg(eepromCurrentSettings, systemState);
+  uploadPageCfg(runningCfg, profileSettings, activeProfile, systemState);
   // refresh the screen elements
   pageValuesRefresh();
 }
 
 void lcdQuickProfileSwitch(void) {
-  lcdSwitchActiveToStoredProfile(eepromGetCurrentSettings());
+  lcdSwitchActiveToStoredProfile(profileSettings);
   lcdShowPopup("Profile switched!");
+}
+
+void onProfileReceived(Profile& newProfile) {
+  activeProfile = newProfile;
+  activeProfileInitialized = true;
+}
+
+void onGaggiaSettingsReceived(GaggiaSettings& newSettings) {
+  gaggiaSettingsInitialised = true;
+  runningCfg = newSettings;
+}
+
+void onManualBrewPhaseReceived(Phase& phase) {
+  if (manualProfile.phaseCount() != 1) {
+    manualProfile.phases.resize(1);
+  }
+  manualProfile.phases[0] = phase;
+}
+
+void onOperationModeReceived(OperationMode operationMode) {
+  systemState.operationMode = operationMode;
+}
+
+void onBoilerSettingsReceived(BoilerSettings& boilerSettings) {
+  runningCfg.boiler = boilerSettings;
+}
+
+void onLedSettingsReceived(LedSettings& ledSettings) {
+  runningCfg.led = ledSettings;
+}
+
+void onSystemSettingsReceived(SystemSettings& systemSettings) {
+  runningCfg.system = systemSettings;
+}
+
+void onBrewSettingsReceived(BrewSettings& brewSettings) {
+  runningCfg.brew = brewSettings;
 }
 
 //#############################################################################################
 //###############################____PROFILING_CONTROL____#####################################
 //#############################################################################################
 
-void onProfileReceived(Profile& newProfile) {
-}
-
 static void profiling(void) {
   if (currentState.brewActive) { //runs this only when brew button activated and pressure profile selected
     uint32_t timeInShot = millis() - brewingTimer;
-    phaseProfiler.setProfile(ACTIVE_PROFILE(runningCfg));
+    phaseProfiler.setProfile(activeProfile);
     phaseProfiler.updatePhase(timeInShot, currentState);
     const CurrentPhase& currentPhase = phaseProfiler.getCurrentPhase();
     ShotSnapshot shotSnapshot = buildShotSnapshot(timeInShot, currentState, phaseProfiler);
@@ -534,7 +578,7 @@ static void profiling(void) {
   }
   // Keep that water at temp
   if (millis() - iddleTimer < 1000 * 60 * 90){ //safety if machine is forgotten on
-    justDoCoffee(runningCfg, currentState);
+    justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
   } else {
     setBoilerOff();
     digitalWrite(shutdownPin, LOW);
@@ -545,10 +589,18 @@ static void manualFlowControl(void) {
   if (currentState.brewActive) {
     float flow_reading = lcdGetManualFlowVol() / 10.f ;
     setPumpFlow(flow_reading, 0.f, currentState);
+    // uint32_t timeInShot = millis() - brewingTimer;
+    // ShotSnapshot dummySnapshot = ShotSnapshot {0, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f};
+    // CurrentPhase currentPhase = CurrentPhase {0, 
+    // Phase {PHASE_TYPE::PHASE_TYPE_FLOW,Transition(flow_reading, TransitionCurve::INSTANT, 0), -1, -1}, 
+    // timeInShot,
+    // ShotSnapshot {0, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f}};
+    // ShotSnapshot shotSnapshot = buildShotSnapshot(timeInShot, currentState, currentPhase);
+    // espCommsSendShotData(shotSnapshot, 100);
   } else {
     setPumpOff();
   }
-  justDoCoffee(runningCfg, currentState);
+  justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
 }
 
 //#############################################################################################
@@ -641,7 +693,13 @@ static inline void sysHealthCheck() {
     setBoilerOff();
     if (millis() > thermoTimer) {
       LOG_ERROR("Cannot read temp from thermocouple (last read: %.1lf)!", static_cast<double>(currentState.temperature));
-      currentState.steamActive ? lcdShowPopup("COOLDOWN") : lcdShowPopup("TEMP READ ERROR"); // writing a LCD message
+      if(currentState.steamActive) {
+        lcdShowPopup("COOLDOWN");
+        espCommsSendNotification(Notification::warn("COOLDOWN!"));
+      } else {
+        lcdShowPopup("TEMP READ ERROR");
+        espCommsSendNotification(Notification::warn("TEMP READ ERROR"));
+      }
       currentState.temperature  = thermocoupleRead() - runningCfg.boiler.offsetTemp;  // Making sure we're getting a value
       thermoTimer = millis() + GET_KTYPE_READ_EVERY;
     }

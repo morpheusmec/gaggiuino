@@ -43,11 +43,14 @@ struct LedSettings {
 };
 
 struct GaggiaSettings {
-  BoilerSettings   boiler;
-  SystemSettings   system;
-  BrewSettings     brew;
-  ProfileSettings  profiles;
-  LedSettings      led;
+  BoilerSettings boiler;
+  SystemSettings system;
+  BrewSettings   brew;
+  LedSettings    led;
+};
+
+struct GaggiaProfiles {
+    ProfileSettings  profiles;     /* Saved profiles array */
 };
 
 #endif

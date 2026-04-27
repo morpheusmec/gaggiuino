@@ -17,7 +17,6 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
   switch (descalingState) {
     case DescalingState::IDLE: // Waiting for fuckfest to begin
       if (currentState.brewSwitchState) {
-        ACTIVE_PROFILE(settings).waterTemperature = 70;
         descalingState = DescalingState::DESCALING_PHASE1;
         descalingCycle = 0;
         descalingTimer = millis();
@@ -127,7 +126,7 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
       }
       break;
   }
-  justDoCoffee(settings, currentState);
+  justDoCoffee(settings, currentState, 70.f);
 }
 
 void solenoidBeat3W() {

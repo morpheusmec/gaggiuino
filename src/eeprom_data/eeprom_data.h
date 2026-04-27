@@ -19,18 +19,24 @@ struct BaseValues_t {};
 
 struct eepromMetadata_t: public BaseMetadata_t {
   size_t dataLength;
+  size_t profileLength;
   uint32_t versionTimestampXOR;
 };
 
 struct eepromValues_t: public BaseValues_t {
   GaggiaSettings values;
 };
+struct eepromProfiles_t: public BaseValues_t {
+  ProfileSettings profiles;
+};
 
 void eepromInit(void);
-bool eepromWrite(const GaggiaSettings);
+bool eepromWrite(const GaggiaSettings newGaggiaSettings, const ProfileSettings newGaggiaProfiles);
 GaggiaSettings eepromGetDefaultSettings(void);
 GaggiaSettings eepromGetCurrentSettings(void);
+ProfileSettings eepromGetCurrentProfiles(void);
+ProfileSettings eepromGetDefaultProfiles(void);
 
-#define ACTIVE_PROFILE(settings) settings.profiles.savedProfiles[settings.profiles.activeProfileIndex]
+#define ACTIVE_PROFILE(profiles) profiles.savedProfiles[profiles.activeProfileIndex]
 
 #endif

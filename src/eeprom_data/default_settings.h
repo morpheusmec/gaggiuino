@@ -7,13 +7,6 @@
 GaggiaSettings getDefaultGaggiaSettings(void) {
   GaggiaSettings defaultData;
 
-  // Profiles
-  defaultData.profiles.activeProfileIndex = 0;
-  defaultData.profiles.savedProfiles.clear();
-  for (auto profile : defaultProfiles) {
-    defaultData.profiles.savedProfiles.push_back(Profile(profile));
-  }
-
   // Boiler
   defaultData.boiler.steamSetPoint = 165;
   defaultData.boiler.offsetTemp = 3;
@@ -40,6 +33,16 @@ GaggiaSettings getDefaultGaggiaSettings(void) {
   defaultData.led.color.G = 0;
   defaultData.led.color.B = 9;
 
+  return defaultData;
+}
+
+ProfileSettings getDefaultProfileSettings(void){
+  ProfileSettings defaultData;
+  defaultData.activeProfileIndex = 0;
+  defaultData.savedProfiles.clear();
+  for (auto profile : defaultProfiles) {
+    defaultData.savedProfiles.push_back(Profile(profile));
+  }
   return defaultData;
 }
 

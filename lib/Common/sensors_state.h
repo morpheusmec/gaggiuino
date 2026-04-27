@@ -31,20 +31,22 @@ struct SensorState {
   float consideredFlow;
   float pumpCPS;
   float pumpLoad;
-  uint16_t waterLvl;
+  uint16_t waterLevel;
   bool tofReady;
 };
 
 struct SensorStateSnapshot {
   bool brewActive;
   bool steamActive;
-  bool scalesPresent;
+  bool flushActive;
+  bool hotWaterActive;
   float temperature;
+  float waterTemperature;
   float pressure;
   float pumpFlow;
   float weightFlow;
   float weight;
-  uint16_t waterLvl;
+  uint16_t waterLevel;
 };
 
 struct ShotSnapshot {

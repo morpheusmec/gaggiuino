@@ -43,7 +43,6 @@ message LedSettingsDto {
 message GaggiaSettingsDto {
   BoilerSettingsDto boiler = 1;
   SystemSettingsDto system = 2;
-  BrewSettingsDto brew = 3;
-  ProfileSettingsDto profiles = 4;
-  LedSettingsDto led = 5;
+  BrewSettingsDto   brew = 3;
+  LedSettingsDto    led = 4;
 }

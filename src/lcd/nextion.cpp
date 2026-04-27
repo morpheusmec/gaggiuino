@@ -71,12 +71,12 @@ void lcdWakeUp(void) {
   myNex.writeNum("sleep", 0);
 }
 
-void lcdUploadProfile(GaggiaSettings& settings) {
-  mapProfileToNextionProfile(ACTIVE_PROFILE(settings), nextionProfile);
+void lcdUploadProfile(const Profile& profile, int profileidx) {
+  mapProfileToNextionProfile(profile, nextionProfile);
 
   // Highlight the active profile
-  myNex.writeNum("pId", settings.profiles.activeProfileIndex + 1  /* 1-offset in nextion */);
-  String buttonElemId = String("home.qPf") + (settings.profiles.activeProfileIndex + 1) + ".txt";
+  myNex.writeNum("pId", profileidx + 1  /* 1-offset in nextion */);
+  String buttonElemId = String("home.qPf") + (profileidx + 1) + ".txt";
   myNex.writeStr(buttonElemId, nextionProfile.name);
 
   // Temp
@@ -162,13 +162,13 @@ void lcdUploadProfile(GaggiaSettings& settings) {
 }
 
 // This is never called again after boot
-void lcdUploadCfg(GaggiaSettings& settings) {
+void lcdUploadCfg(GaggiaSettings& settings, ProfileSettings& profiles) {
   // Profile names for all buttons
-  myNex.writeStr("home.qPf1.txt", settings.profiles.savedProfiles[0].name.c_str());
-  myNex.writeStr("home.qPf2.txt", settings.profiles.savedProfiles[1].name.c_str());
-  myNex.writeStr("home.qPf3.txt", settings.profiles.savedProfiles[2].name.c_str());
-  myNex.writeStr("home.qPf4.txt", settings.profiles.savedProfiles[3].name.c_str());
-  myNex.writeStr("home.qPf5.txt", settings.profiles.savedProfiles[4].name.c_str());
+  myNex.writeStr("home.qPf1.txt", profiles.savedProfiles[0].name.c_str());
+  myNex.writeStr("home.qPf2.txt", profiles.savedProfiles[1].name.c_str());
+  myNex.writeStr("home.qPf3.txt", profiles.savedProfiles[2].name.c_str());
+  myNex.writeStr("home.qPf4.txt", profiles.savedProfiles[3].name.c_str());
+  myNex.writeStr("home.qPf5.txt", profiles.savedProfiles[4].name.c_str());
 
   // More brew settings
   myNex.writeNum("bckHome", settings.brew.homeOnShotFinish);
@@ -195,18 +195,18 @@ void lcdUploadCfg(GaggiaSettings& settings) {
       settings.led.color.B
     )
   );
-  lcdUploadProfile(settings);
+  lcdUploadProfile(profiles.savedProfiles[profiles.activeProfileIndex], profiles.activeProfileIndex);
 }
 
-void uploadPageCfg(GaggiaSettings& settings, SystemState& sys) {
+void uploadPageCfg(GaggiaSettings& settings, ProfileSettings& profiles, Profile& profile, SystemState& sys) {
 
   // Updating only page specific elements as necessary to speed up things and avoid needless writes.
-  mapProfileToNextionProfile(ACTIVE_PROFILE(settings), nextionProfile);
+  mapProfileToNextionProfile(profile, nextionProfile);
 
   switch (lcdCurrentPageId) {
   case NextionPage::BrewPreinfusion:
     // PI
-    mapPreinfusionPhaseToNextion(ACTIVE_PROFILE(settings), nextionProfile);
+    mapPreinfusionPhaseToNextion(profile, nextionProfile);
     myNex.writeNum("piState", nextionProfile.preinfusionState);
     myNex.writeNum("piFlowState", nextionProfile.preinfusionFlowState);
 
@@ -225,8 +225,8 @@ void uploadPageCfg(GaggiaSettings& settings, SystemState& sys) {
     myNex.writeNum("pi.piAbove.val", nextionProfile.preinfusionWeightAbove * 10.f);
     break;
   case NextionPage::BrewSoak:
-    mapSoakPhaseToNextion(ACTIVE_PROFILE(settings), nextionProfile);
-    mapRampPhaseToNextion(ACTIVE_PROFILE(settings), nextionProfile);
+    mapSoakPhaseToNextion(profile, nextionProfile);
+    mapRampPhaseToNextion(profile, nextionProfile);
     myNex.writeNum("skState", nextionProfile.soakState);
 
     if (nextionProfile.preinfusionFlowState == 0) {
@@ -288,7 +288,7 @@ void uploadPageCfg(GaggiaSettings& settings, SystemState& sys) {
     }
     break;
   default:
-    lcdUploadCfg(settings);
+    lcdUploadCfg(settings, profiles);
     break;
   }
 }
@@ -397,11 +397,11 @@ void lcdFetchTemp(nextion_profile_t& profile) {
 * Overwrites the entire profile in the index corresponding to
 * the currently selected profile on the screen.
 */
-void lcdFetchCurrentProfile(GaggiaSettings& settings) {
+void lcdFetchCurrentProfile(GaggiaSettings& settings, ProfileSettings& profiles) {
   // Target save to the currently selected profile on screen (can be different from runningCfg on long press)
-  settings.profiles.activeProfileIndex = lcdGetSelectedProfile();
+  profiles.activeProfileIndex = lcdGetSelectedProfile();
 
-  lcdFetchProfileName(nextionProfile, settings.profiles.activeProfileIndex);
+  lcdFetchProfileName(nextionProfile, profiles.activeProfileIndex);
   lcdFetchPreinfusion(nextionProfile);
   lcdFetchSoak(nextionProfile);
   lcdFetchBrewProfile(nextionProfile);
@@ -409,7 +409,7 @@ void lcdFetchCurrentProfile(GaggiaSettings& settings) {
   lcdFetchDoseSettings(nextionProfile);
   lcdFetchTemp(nextionProfile);
 
-  mapNextionProfileToProfile(nextionProfile, ACTIVE_PROFILE(settings));
+  mapNextionProfileToProfile(nextionProfile, profiles.savedProfiles[profiles.activeProfileIndex]);
 }
 
 void lcdFetchBrewSettings(GaggiaSettings& settings) {
@@ -439,31 +439,33 @@ void lcdFetchLed(GaggiaSettings& settings) {
   lcdDecodeLedSettings(ledNum, settings.led.state, settings.led.disco, settings.led.color.R, settings.led.color.G, settings.led.color.B);
 }
 
-void lcdFetchPage(GaggiaSettings& settings, NextionPage page, int targetProfile) {
+void lcdFetchPage(GaggiaSettings& settings, ProfileSettings& profiles, NextionPage page) {
+  int targetProfile = lcdGetSelectedProfile();
+  profiles.activeProfileIndex = targetProfile;
   switch (page) {
   case NextionPage::BrewMore:
     lcdFetchBrewSettings(settings);
     break;
   case NextionPage::BrewPreinfusion:
     lcdFetchPreinfusion(nextionProfile);
-    mapPreinfusionPhaseFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapPreinfusionPhaseFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     break;
   case NextionPage::BrewSoak:
     lcdFetchSoak(nextionProfile);
-    mapSoakPhaseFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
-    mapRampPhaseFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapSoakPhaseFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
+    mapRampPhaseFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     break;
   case NextionPage::BrewProfiling:
     lcdFetchBrewProfile(nextionProfile);
-    mapMainSlopeFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapMainSlopeFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     break;
   case NextionPage::BrewTransitionProfile:
     lcdFetchTransitionProfile(nextionProfile);
-    mapTransitionPhaseFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapTransitionPhaseFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     break;
   case NextionPage::SettingsBoiler:
     lcdFetchTemp(nextionProfile);
-    mapGlobalVarsFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapGlobalVarsFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     lcdFetchBoiler(settings);
     break;
   case NextionPage::SettingsSystem:
@@ -471,7 +473,7 @@ void lcdFetchPage(GaggiaSettings& settings, NextionPage page, int targetProfile)
     break;
   case NextionPage::ShotSettings:
     lcdFetchDoseSettings(nextionProfile);
-    mapGlobalVarsFromNextion(nextionProfile, settings.profiles.savedProfiles[targetProfile]);
+    mapGlobalVarsFromNextion(nextionProfile, profiles.savedProfiles[targetProfile]);
     break;
   case NextionPage::Led:
     lcdFetchLed(settings);
