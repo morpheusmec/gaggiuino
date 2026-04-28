@@ -15,7 +15,7 @@ void espCommsReadData();
 Phase& espCommsGetManualPhase();
 
 // Send to MCU
-void espCommsSendSensorData(const SensorState& state, uint32_t frequency = 1000);
+void espCommsSendSensorData(const GaggiaSettings& settings,const SensorState& state, const Profile profile, uint32_t frequency = 1000);
 void espCommsSendShotData(const ShotSnapshot& shotData, uint32_t frequency = 100);
 void espCommsSendTareScalesCommand();
 void espCommsSendNotification(const Notification notification);
@@ -25,6 +25,7 @@ void espCommsRequestData(McuCommsMessageType dataType);
 // MCU updates
 void onRemoteScalesWeightReceived(float weight);
 void onRemoteScalesDisconnected();
+void onTareCommandReceived();
 
 // Settings updates
 void onGaggiaSettingsReceived(GaggiaSettings& gaggiaSettings);

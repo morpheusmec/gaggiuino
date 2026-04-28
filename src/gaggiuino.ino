@@ -99,7 +99,7 @@ void loop(void) {
   relaysActuate();
   modeSelect();
   lcdRefresh();
-  espCommsSendSensorData(currentState, 100);
+  espCommsSendSensorData(runningCfg, currentState, activeProfile, 200);
   sysHealthCheck();
 }
 
@@ -470,13 +470,8 @@ void lcdLoadDefaultProfileTrigger(void) {
   lcdShowPopup("Profile loaded!");
 }
 
-void onTareReceived() {
-  LOG_VERBOSE("Tare scales");
-  if (currentState.scalesPresent) currentState.tarePending = true;
-}
-
 void lcdScalesTareTrigger(void) {
-  onTareReceived();
+  onTareCommandReceived();
 }
 
 void lcdHomeScreenScalesTrigger(void) {
@@ -496,7 +491,7 @@ void lcdBrewGraphScalesTareTrigger(void) {
 }
 
 void lcdRefreshElementsTrigger(void) {
-  GaggiaSettings eepromCurrentSettings = eepromGetCurrentSettings();
+  // GaggiaSettings eepromCurrentSettings = eepromGetCurrentSettings();
   // Make the necessary changes
   uploadPageCfg(runningCfg, profileSettings, activeProfile, systemState);
   // refresh the screen elements
@@ -543,6 +538,11 @@ void onSystemSettingsReceived(SystemSettings& systemSettings) {
 
 void onBrewSettingsReceived(BrewSettings& brewSettings) {
   runningCfg.brew = brewSettings;
+}
+
+void onTareCommandReceived() {
+  LOG_VERBOSE("Tare scales");
+  if (currentState.scalesPresent) currentState.tarePending = true;
 }
 
 //#############################################################################################

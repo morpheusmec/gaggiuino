@@ -31,11 +31,12 @@ message SensorStateSnapshotDto {
   bool hotWaterActive = 4;
   float temperature = 5;
   float waterTemperature = 6;
-  float pressure = 7;
-  float pumpFlow = 8;
-  float weightFlow = 9;
-  float weight = 10;
-  uint32 waterLevel = 11; 
+  float targetTemperature = 7;
+  float pressure = 8;
+  float pumpFlow = 9;
+  float weightFlow = 10;
+  float weight = 11;
+  uint32 waterLevel = 12; 
 }
 
 message ShotSnapshotDto {

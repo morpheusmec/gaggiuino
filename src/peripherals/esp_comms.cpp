@@ -35,7 +35,7 @@ void espCommsInit() {
 //---------------------------------------------------------------------------
 
 volatile uint32_t sensorDataTimer = 0;
-void espCommsSendSensorData(const SensorState& state, uint32_t frequency) {
+void espCommsSendSensorData(const GaggiaSettings& settings, const SensorState& state, const Profile profile, uint32_t frequency) {
   uint32_t now = millis();
   if (now - sensorDataTimer < frequency) return;
 
@@ -46,6 +46,7 @@ void espCommsSendSensorData(const SensorState& state, uint32_t frequency) {
     .hotWaterActive = state.hotWaterActive,
     .temperature = state.temperature,
     .waterTemperature = state.waterTemperature,
+    .targetTemperature = state.steamActive ? settings.boiler.steamSetPoint : profile.waterTemperature,
     .pressure = state.smoothedPressure,
     .pumpFlow = state.smoothedPumpFlow,
     .weightFlow = state.smoothedWeightFlow,
@@ -168,6 +169,10 @@ void handleMessageReceived(McuCommsMessageType messageType, std::vector<uint8_t>
     BrewSettings brewSettings;
     ProtoSerializer::deserialize<BrewSettingsConverter>(data, brewSettings);
     onBrewSettingsReceived(brewSettings);
+    break;
+  }
+  case McuCommsMessageType::MCUC_CMD_TARE: {
+    onTareCommandReceived();
     break;
   }
   default: // Ignore message in all other cases

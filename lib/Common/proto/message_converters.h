@@ -97,6 +97,7 @@ public:
       .hotWaterActive = local.hotWaterActive,
       .temperature = local.temperature,
       .waterTemperature = local.waterTemperature,
+      .targetTemperature = local.targetTemperature,
       .pressure = local.pressure,
       .pumpFlow = local.pumpFlow,
       .weightFlow = local.weightFlow,
@@ -116,6 +117,7 @@ public:
     local.hotWaterActive = proto.hotWaterActive;
     local.temperature = proto.temperature;
     local.waterTemperature = proto.waterTemperature;
+    local.targetTemperature = proto.targetTemperature;
     local.pressure = proto.pressure;
     local.pumpFlow = proto.pumpFlow;
     local.weightFlow = proto.weightFlow;

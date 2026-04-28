@@ -2,6 +2,8 @@
 #ifndef SENSORS_STATE_H
 #define SENSORS_STATE_H
 
+#include <Arduino.h>
+
 struct SensorState {
   bool brewSwitchState;
   bool flushSwitchState;
@@ -42,6 +44,7 @@ struct SensorStateSnapshot {
   bool hotWaterActive;
   float temperature;
   float waterTemperature;
+  float targetTemperature;
   float pressure;
   float pumpFlow;
   float weightFlow;
