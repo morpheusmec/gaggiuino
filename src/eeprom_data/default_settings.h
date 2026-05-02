@@ -20,15 +20,22 @@ GaggiaSettings getDefaultGaggiaSettings(void) {
   defaultData.brew.basketPrefill = false;
 
   // System settings
-  defaultData.system.powerLineFrequency = 60;
-  defaultData.system.scalesF1 = 1010;
-  defaultData.system.scalesF2 = 1010;
   defaultData.system.pumpFlowAtZero = 0.2401f;
   defaultData.system.lcdSleep = 16;
   defaultData.system.warmupState = false;
 
+  // Scales settings
+  defaultData.scales.forcePredictive = false;
+  defaultData.scales.hwScalesEnabled = true;
+  defaultData.scales.hwScalesF1 = 1010;
+  defaultData.scales.hwScalesF2 = 0; 
+  defaultData.scales.btScalesEnabled = false;
+  defaultData.scales.btScalesAutoConnect = false;
+  
+
   // LED settings
   defaultData.led.state = true;
+  defaultData.led.disco = false;
   defaultData.led.color.R = 9;
   defaultData.led.color.G = 0;
   defaultData.led.color.B = 9;

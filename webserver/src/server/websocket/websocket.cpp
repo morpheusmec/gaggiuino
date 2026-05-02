@@ -1,14 +1,26 @@
 #include "websocket.h"
-#include "../../log/log.h"
 #include <deque>
 #include <WiFi.h>
 #include "ESPAsyncWebServer.h"
 #include "AsyncTCP.h"
 #include <ArduinoJson.h>
+#include "../../log/log.h"
+
+#include "../../state/state.h"
+#include "../json/json_system_state_converters.h"
+#include "../json/json_profile_converters.h"
+#include "../json/json_settings_converters.h"
+#include "../json/json_notification_converters.h"
 
 const std::string WS_MSG_SENSOR_DATA = "sensor_data_update";
 const std::string WS_MSG_SHOT_DATA = "shot_data_update";
 const std::string WS_MSG_LOG = "log_record";
+const std::string WS_MSG_SYSTEM_STATE = "sys_state";
+const std::string WS_MSG_ACTIVE_PROFILE_UPDATED = "act_prof_update";
+const std::string WS_MSG_SETTINGS_UPDATED = "settings_update";
+const std::string WS_MSG_NOTIFICATION = "notification";
+const std::string WS_MSG_DESCALING_PROGRESS = "descaling_progress";
+const std::string WS_MSG_BLE_SCALES_UPDATED = "ble_scls_upd";
 
 namespace websocket {
   AsyncWebSocket wsServer("/ws");
@@ -105,22 +117,14 @@ void handleWebSocketMessage(void* arg, uint8_t* data, size_t len) {
 //-------------------------------------------------------------//
 //--------------------------OUTGOING---------------------------//
 //-------------------------------------------------------------//
-void wsSendSensorStateSnapshotToClients(SensorStateSnapshot& snapshot) {
+void wsSendSensorStateSnapshotToClients(const SensorStateSnapshot& snapshot) {
   if (!websocket::lockJson()) return;
   JsonObject root = websocket::jsonDoc.to<JsonObject>();
 
   root["action"] = WS_MSG_SENSOR_DATA;
 
   JsonObject data = root.createNestedObject("data");
-  data["brewActive"] = snapshot.brewActive;
-  data["steamActive"] = snapshot.steamActive;
-  data["scalesPresent"] = snapshot.scalesPresent;
-  data["temperature"] = snapshot.temperature;
-  data["waterLvl"] = snapshot.waterLvl;
-  data["pressure"] = snapshot.pressure;
-  data["pumpFlow"] = snapshot.pumpFlow;
-  data["weightFlow"] = snapshot.weightFlow;
-  data["weight"] = snapshot.weight;
+  json::mapSensorStateToJson(snapshot, data);
 
   std::string serializedMsg; // create temp buffer
   serializeJson(root, serializedMsg);  // serialize to buffer
@@ -129,23 +133,14 @@ void wsSendSensorStateSnapshotToClients(SensorStateSnapshot& snapshot) {
   websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
 }
 
-void wsSendShotSnapshotToClients(ShotSnapshot& snapshot) {
+void wsSendShotSnapshotToClients(const ShotSnapshot& snapshot) {
   if (!websocket::lockJson()) return;
   JsonObject root = websocket::jsonDoc.to<JsonObject>();
 
   root["action"] = WS_MSG_SHOT_DATA;
 
   JsonObject data = root.createNestedObject("data");
-  data["timeInShot"] = snapshot.timeInShot;
-  data["pressure"] = snapshot.pressure;
-  data["pumpFlow"] = snapshot.pumpFlow;
-  data["weightFlow"] = snapshot.weightFlow;
-  data["temperature"] = snapshot.temperature;
-  data["shotWeight"] = snapshot.shotWeight;
-  data["waterPumped"] = snapshot.waterPumped;
-  data["targetTemperature"] = snapshot.targetTemperature;
-  data["targetPumpFlow"] = snapshot.targetPumpFlow;
-  data["targetPressure"] = snapshot.targetPressure;
+  json::mapShotSnapshotToJson(snapshot, data);
 
   std::string serializedMsg; // create temp buffer
   serializeJson(root, serializedMsg);  // serialize to buffer
@@ -169,4 +164,98 @@ void wsSendLog(std::string log, std::string source) {
   websocket::unlockJson();
 
   websocket::wsSendWithBuffer(serializedMsg);
+}
+
+void wsSendSystemStateToClients(const SystemState& systemState) {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_SYSTEM_STATE;
+
+  JsonObject data = root.createNestedObject("data");
+  json::mapSystemStateToJson(systemState, data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
+}
+
+void wsSendActiveProfileUpdated() {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_ACTIVE_PROFILE_UPDATED;
+  JsonObject data = root.createNestedObject("data");
+  json::mapProfileToJson(state::getActiveProfileId(), state::getActiveProfile(), data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
+}
+
+void wsSendSettingsUpdated() {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_SETTINGS_UPDATED;
+  JsonObject data = root.createNestedObject("data");
+  json::mapAllSettingsToJson(state::getSettings(), data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
+};
+
+void wsSendNotification(const Notification& notification) {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_NOTIFICATION;
+  JsonObject data = root.createNestedObject("data");
+  json::mapNotificationToJson(notification, data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
+}
+
+void wsSendDescalingProgress(const DescalingProgress& progress) {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_DESCALING_PROGRESS;
+  JsonObject data = root.createNestedObject("data");
+  json::mapDescalingProgressToJson(progress, data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
+}
+
+void wsSendConnectedBleScalesUpdated(const blescales::Scales& scles) {
+  if (!websocket::lockJson()) return;
+  JsonObject root = websocket::jsonDoc.to<JsonObject>();
+
+  root["action"] = WS_MSG_BLE_SCALES_UPDATED;
+  JsonObject data = root.createNestedObject("data");
+  json::mapBleScalesToJson(scles, data);
+
+  std::string serializedMsg; // create temp buffer
+  serializeJson(root, serializedMsg);  // serialize to buffer
+
+  websocket::unlockJson();
+
+  websocket::wsServer.textAll(serializedMsg.c_str(), serializedMsg.length());
 }

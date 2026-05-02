@@ -6,10 +6,12 @@ enum OperationModeDto {
   FLUSH = 2;
   DESCALE = 3;
   STEAM = 4;
+  FLUSH_AUTO = 5;
 };
 
-message UpdateOperationModeDto {
+message UpdateSystemStateComandDto {
   OperationModeDto operationMode = 1;
+  bool tarePending = 2;
 }
 
 message RequestDataDto {
@@ -22,6 +24,8 @@ message SystemStateDto {
   bool isSteamForgottenON = 3;
   bool scalesPresent = 4;
   OperationModeDto operationMode = 5;
+  uint32 timeAlive = 6;
+  bool tarePending = 8;
 }
 
 message SensorStateSnapshotDto {
@@ -66,4 +70,20 @@ message NotificationDto {
   }
   NotificationTypeDto type = 1;
   string message = 2;
+}
+
+enum DescalingStateDto {
+  IDLE = 0;
+  PHASE1 = 1;
+  PHASE2 = 2;
+  PHASE3 = 3;
+  PHASE4 = 4;
+  PHASE5 = 5;
+  FINISHED = 6;
+}
+
+message DescalingProgressDto {
+  DescalingStateDto state = 1;
+  uint32 time = 2;
+  uint32 progess = 3;
 }

@@ -6,6 +6,10 @@
 #define M_PI 3.14159265359
 #endif
 
+const uint8_t BUFFER_SIZE = 5;
+float avgBuffer[BUFFER_SIZE] = {0.f};
+int currentAvgIndex = 0;
+
 float percentageWithTransition(float pct, TransitionCurve transition);
 
 float mapRange(float refNumber, float refStart, float refEnd, float targetStart, float targetEnd, int decimalPrecision, TransitionCurve transition) {
@@ -54,3 +58,19 @@ float percentageWithTransition(float pct, TransitionCurve transition) {
   }
 }
 
+float getAverage(float value) {
+  avgBuffer[currentAvgIndex] = value;
+  currentAvgIndex = (currentAvgIndex + 1) % BUFFER_SIZE;
+
+  float sum = 0;
+  for (int i = 0; i < BUFFER_SIZE; ++i) {
+      sum += avgBuffer[i];
+  }
+
+  return sum / BUFFER_SIZE;
+}
+
+float truncate(float num, uint8_t precision) {
+    float factor = std::pow(10.0f, precision);
+    return roundf(num * factor) / factor;
+}

@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include "profiling_phases.h"
 #include <vector>
+#include <string>
 
 struct BoilerSettings {
   uint16_t steamSetPoint; /* Desired steam temperature */
@@ -13,12 +14,27 @@ struct BoilerSettings {
   uint16_t brewDivider;
 };
 struct SystemSettings {
-  uint16_t powerLineFrequency; /* Frequence of main power in Hz */
   float    pumpFlowAtZero;     /* A PZ constant used for pump calibration */
-  int      scalesF1;           /* Scales calibration constant 1 */
-  int      scalesF2;           /* Scales calibration constant 2 */
   uint16_t lcdSleep;           /* Time (in minutes) after which the screen should go to sleep */
   bool     warmupState;        /* Should gaggia wait to warmup */
+};
+
+struct ScalesSettings {
+  bool forcePredictive;
+  bool hwScalesEnabled;
+  int  hwScalesF1;
+  int  hwScalesF2;
+  bool btScalesEnabled;
+  bool btScalesAutoConnect;
+
+  friend bool operator==(const ScalesSettings& lhs, const ScalesSettings& rhs) {
+    return lhs.forcePredictive == rhs.forcePredictive &&
+      lhs.hwScalesEnabled == rhs.hwScalesEnabled &&
+      lhs.hwScalesF1 == rhs.hwScalesF1 &&
+      lhs.hwScalesF2 == rhs.hwScalesF2 &&
+      lhs.btScalesEnabled == rhs.btScalesEnabled &&
+      lhs.btScalesAutoConnect == rhs.btScalesAutoConnect;
+  }
 };
 
 struct BrewSettings {
@@ -34,7 +50,7 @@ struct ProfileSettings {
 
 struct LedSettings {
   bool state;        /* Should the led be ON or OFF */
-  bool disco;
+  bool disco;        /* Should we activate disco mode during brew */
   struct Color {     /* The led color */
     uint8_t R;
     uint8_t G;
@@ -47,10 +63,7 @@ struct GaggiaSettings {
   SystemSettings system;
   BrewSettings   brew;
   LedSettings    led;
-};
-
-struct GaggiaProfiles {
-    ProfileSettings  profiles;     /* Saved profiles array */
+  ScalesSettings scales;
 };
 
 #endif

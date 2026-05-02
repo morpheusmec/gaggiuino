@@ -4,11 +4,11 @@
 #include "ESPAsyncWebServer.h"
 #include "AsyncJson.h"
 
-AsyncCallbackJsonWebHandler* jsonHandler(const char* uri, WebRequestMethodComposite method, ArJsonRequestHandlerFunction onRequest) {
-  AsyncCallbackJsonWebHandler* handler = new AsyncCallbackJsonWebHandler(String(uri), onRequest);
-  handler->setMethod(method);
-  return handler;
-}
+AsyncCallbackJsonWebHandler* jsonHandler(const char* uri, WebRequestMethodComposite method, ArJsonRequestHandlerFunction onRequest);
 
+void onJsonBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total);
 
+ArRequestHandlerFunction withJson(ArJsonRequestHandlerFunction wrappedHandler, size_t bufferSize = 1024);
+
+void sendJsonResponse(AsyncWebServerRequest *request, JsonVariantConst json, int code = 200);
 #endif

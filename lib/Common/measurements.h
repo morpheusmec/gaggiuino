@@ -2,12 +2,17 @@
 #define MEASUREMENTS_UTIL_H
 
 #include "Arduino.h"
+#include "utils.h"
 #include <deque>
 
 /** Holds a measurement value and the time it was taken */
 struct Measurement {
   float value = 0.f;
   uint32_t millis = 0u;
+
+  void setPrecision(uint8_t precision) {
+    value = truncate(value, precision);
+  }
 };
 
 /** Holds a measurement delta and can calculate its speed of change */
@@ -15,7 +20,7 @@ struct MeasurementChange {
   float deltaValue;
   uint32_t deltaMillis;
 
-  float changeSpeed() {
+  float speed() {
     if (deltaMillis == 0) {
       return 0.f;
     }
@@ -40,9 +45,9 @@ private:
 public:
   Measurements(size_t size) : size(size) {}
 
-  Measurement latest();
-  Measurement previous();
-  MeasurementChange measurementChange();
+  Measurement getLatest();
+  Measurement getPrevious();
+  MeasurementChange getMeasurementChange();
   void clear();
   void add(float value);
   void add(Measurement measurement);

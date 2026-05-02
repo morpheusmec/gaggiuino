@@ -31,13 +31,16 @@ enum class McuCommsMessageType : uint8_t {
   MCUC_DATA_NOTIFICATION = 12,
   MCUC_DATA_MANUAL_BREW_PHASE = 13,
   MCUC_DATA_SYSTEM_STATE = 14,
+  MCUC_DATA_DESCALING_PROGRESS = 18,
+  MCUC_DATA_SCALES_SETTINGS = 19,
 
   // Request specific data
   MCUC_REQ_DATA = 15,
 
   // Commands
   MCUC_CMD_REMOTE_SCALES_TARE = 16,
-  MCUC_CMD_TARE = 17
+  MCUC_CMD_UPDATE_SYSTEM_STATE = 17,
+  MCUC_CMD_TARE = 20,
 };
 
 struct McuCommsRequestData {

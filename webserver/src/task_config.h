@@ -14,6 +14,8 @@
 const UBaseType_t PRIORITY_BLE_SCALES_MAINTAINANCE = 1;
 const UBaseType_t PRIORITY_WEBSERVER_MAINTENANCE = 1;
 const UBaseType_t PRIORITY_WIFI_MAINTENANCE  = 1;
+const UBaseType_t PRIORITY_SCREEN_UPDATE  = 1;
+const UBaseType_t PRIORITY_SCREEN_TICK  = 2;
 const UBaseType_t PRIORITY_STM_COMMS  = 3;
 const UBaseType_t PRIORITY_ASYNC_TCP = 3; // this is hardcoded in the AsyncTCP library. Adding it here for completeness
 
@@ -21,6 +23,8 @@ const UBaseType_t PRIORITY_ASYNC_TCP = 3; // this is hardcoded in the AsyncTCP l
 const UBaseType_t CORE_BLE_SCALES_MAINTAINANCE = 0;
 const UBaseType_t CORE_WIFI_MAINTENANCE  = 0;
 const UBaseType_t CORE_WEBSERVER_MAINTENANCE = 0;
+const UBaseType_t CORE_SCREEN_UPDATE = 1;
+const UBaseType_t CORE_SCREEN_TICK = 0;
 const UBaseType_t CORE_STM_COMMS  = 0;
 const UBaseType_t CORE_ASYNC_TCP = CONFIG_ASYNC_TCP_RUNNING_CORE;
 

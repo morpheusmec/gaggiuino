@@ -122,8 +122,8 @@ bool validateSettings(const GaggiaSettings newGaggiaSettings) {
     || newGaggiaSettings.boiler.brewDivider < 1
     || newGaggiaSettings.system.pumpFlowAtZero < 0.210f
     || newGaggiaSettings.system.pumpFlowAtZero > 0.310f
-    || newGaggiaSettings.system.scalesF1 < -20000
-    || newGaggiaSettings.system.scalesF2 > 20000)
+    || newGaggiaSettings.scales.hwScalesF1 < -20000
+    || newGaggiaSettings.scales.hwScalesF2 > 20000)
   {
     LOG_ERROR(errMsg);
     return false;

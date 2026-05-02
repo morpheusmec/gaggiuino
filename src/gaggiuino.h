@@ -31,8 +31,10 @@
 #endif
 #define GET_PRESSURE_READ_EVERY 10 // Pressure refresh interval (ms)
 #define GET_SCALES_READ_EVERY   100 // Scales refresh interval (ms)
+#define GET_SCALES_ACCIDENTAL   2000u // Accidental touches or placing cup on scales post brew activation timeout
+#define REFRESH_ESP_DATA_EVERY  100 // Screen refresh interval (ms)
 #define REFRESH_SCREEN_EVERY    150 // Screen refresh interval (ms)
-#define REFRESH_FLOW_EVERY      50 // Flow refresh interval (ms)
+#define REFRESH_FLOW_EVERY      100 // Flow refresh interval (ms)
 #define HEALTHCHECK_EVERY       30000 // System checks happen every 30sec
 
 enum class OPERATION_MODES {
@@ -49,22 +51,20 @@ enum class OPERATION_MODES {
   OPMODE_FlowBasedPreinfusionPressureBasedProfiling,
   OPMODE_everythingFlowProfiled,
   OPMODE_pressureBasedPreinfusionAndFlowProfile
-} ;
+};
 
-//Some consts
-#ifndef LEGO_VALVE_RELAY
-const float calibrationPressure = 2.f;
-#else
-const float calibrationPressure = 0.65f;
-#endif
+const float weightRateThreshold = 9.f; // The rate of weigh random change(aka accidental scales touching)
+const float weightIncreaseThreshold = 40.f; // Accounting for placing a cup on the scales after initiating brew
 
 //Timers
 unsigned long systemHealthTimer;
+unsigned long NextionPageRefreshTimer;
 unsigned long pageRefreshTimer;
 unsigned long pressureTimer;
 unsigned long brewingTimer;
 unsigned long thermoTimer;
 unsigned long scalesTimer;
+unsigned long scalesTimeout;
 unsigned long flowTimer;
 unsigned long iddleTimer;
 

@@ -15,16 +15,6 @@ const int BACK_FLUSH_CYCLES = 8;
 //###############################____DESCALE__CONTROL____######################################
 //#############################################################################################
 
-enum class DescalingState {
-  IDLE,
-  DESCALING_PHASE1,
-  DESCALING_PHASE2,
-  DESCALING_PHASE3,
-  DESCALING_PHASE4,
-  DESCALING_PHASE5,
-  FINISHED
-};
-
 void deScale(GaggiaSettings &settings, SensorState &currentState);
 void solenoidBeat3W(void);
 void solenoidBeat2W(void);

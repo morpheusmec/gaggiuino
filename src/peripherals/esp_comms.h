@@ -18,9 +18,10 @@ Phase& espCommsGetManualPhase();
 void espCommsSendSensorData(const GaggiaSettings& settings,const SensorState& state, const Profile profile, uint32_t frequency = 1000);
 void espCommsSendShotData(const ShotSnapshot& shotData, uint32_t frequency = 100);
 void espCommsSendTareScalesCommand();
-void espCommsSendNotification(const Notification notification);
+void espCommsSendNotification(const Notification& notification, uint32_t frequency = 1000);
 void espCommsSendSystemState(const SystemState& systemState, uint32_t frequency = 1000);
 void espCommsRequestData(McuCommsMessageType dataType);
+void espCommsSendDescaleProgress(const DescalingProgress& descalingProgress);
 
 // MCU updates
 void onRemoteScalesWeightReceived(float weight);
@@ -28,17 +29,17 @@ void onRemoteScalesDisconnected();
 void onTareCommandReceived();
 
 // Settings updates
-void onGaggiaSettingsReceived(GaggiaSettings& gaggiaSettings);
-void onBoilerSettingsReceived(BoilerSettings& boilerSettings);
-void onLedSettingsReceived(LedSettings& ledSettings);
-void onSystemSettingsReceived(SystemSettings& systemSettings);
-void onBrewSettingsReceived(BrewSettings& brewSettings);
+void onGaggiaSettingsReceived(const GaggiaSettings& gaggiaSettings);
+void onBoilerSettingsReceived(const BoilerSettings& boilerSettings);
+void onLedSettingsReceived(const LedSettings& ledSettings);
+void onSystemSettingsReceived(const SystemSettings& systemSettings);
+void onBrewSettingsReceived(const BrewSettings& brewSettings);
 
 // System state updates
-void onOperationModeReceived(OperationMode operationMode);
+void onUpdateSystemStateCommandReceived(const UpdateSystemStateComand& command);
 
 // Profiling
-void onProfileReceived(Profile& profile);
-void onManualBrewPhaseReceived(Phase& phase);
+void onProfileReceived(const Profile& profile);
+void onManualBrewPhaseReceived(const Phase& phase);
 
 #endif

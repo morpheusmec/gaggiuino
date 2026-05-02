@@ -181,8 +181,8 @@ void lcdUploadCfg(GaggiaSettings& settings, ProfileSettings& profiles) {
   myNex.writeNum("sT.lowHeat.val", settings.boiler.brewDivider);
 
   myNex.writeNum("sP.n1.val", settings.system.lcdSleep);
-  myNex.writeNum("sP.lc1.val", settings.system.scalesF1);
-  myNex.writeNum("sP.lc2.val", settings.system.scalesF2);
+  myNex.writeNum("sP.lc1.val", settings.scales.hwScalesF1);
+  myNex.writeNum("sP.lc2.val", settings.scales.hwScalesF2);
   myNex.writeNum("warmupState", settings.system.warmupState);
 
   // Led
@@ -429,8 +429,8 @@ void lcdFetchSystem(GaggiaSettings& settings) {
   // System settings
   settings.system.lcdSleep                       = myNex.readNumber("sP.n1.val"); // nextion sleep var
   settings.system.warmupState                    = myNex.readNumber("warmupState");
-  settings.system.scalesF1                       = myNex.readNumber("sP.lc1.val");
-  settings.system.scalesF2                       = myNex.readNumber("sP.lc2.val");
+  settings.scales.hwScalesF1                       = myNex.readNumber("sP.lc1.val");
+  settings.scales.hwScalesF2                       = myNex.readNumber("sP.lc2.val");
 }
 
 void lcdFetchLed(GaggiaSettings& settings) {

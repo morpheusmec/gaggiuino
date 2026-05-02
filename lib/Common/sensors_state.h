@@ -34,7 +34,7 @@ struct SensorState {
   float pumpCPS;
   float pumpLoad;
   uint16_t waterLevel;
-  bool tofReady;
+  float powerLineFrequency;
 };
 
 struct SensorStateSnapshot {

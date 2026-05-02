@@ -4,6 +4,7 @@
 
 #include <Arduino.h>
 #include <stdio.h>
+#include <string>
 
 #define FILENAME (__builtin_strrchr("/" __FILE__, '/') + 1)
 #define LOG_MAX_STRING_LEN 64

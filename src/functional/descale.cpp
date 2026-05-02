@@ -3,6 +3,7 @@
 #include "just_do_coffee.h"
 #include "../peripherals/internal_watchdog.h"
 #include "../lcd/lcd.h"
+#include "system_state.h"
 
 DescalingState descalingState = DescalingState::IDLE;
 
@@ -17,12 +18,12 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
   switch (descalingState) {
     case DescalingState::IDLE: // Waiting for fuckfest to begin
       if (currentState.brewSwitchState) {
-        descalingState = DescalingState::DESCALING_PHASE1;
+        descalingState = DescalingState::PHASE1;
         descalingCycle = 0;
         descalingTimer = millis();
       }
       break;
-    case DescalingState::DESCALING_PHASE1: // Normally open
+    case DescalingState::PHASE1: // Normally open
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
       setSol2Off();
       setSol3Off();
@@ -37,13 +38,13 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
-          descalingState = DescalingState::DESCALING_PHASE2;
+          descalingState = DescalingState::PHASE2;
         } else {
           descalingState = DescalingState::FINISHED;
         }
       }
       break;
-    case DescalingState::DESCALING_PHASE2: // hot water
+    case DescalingState::PHASE2: // hot water
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
       setSol2Off();
       setSol3Off();
@@ -57,10 +58,10 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
       if (millis() - descalingTimer > time_each) {
         descalingTimer = millis();
         lcdSetDescaleCycle(descalingCycle++);
-        descalingState = DescalingState::DESCALING_PHASE3;
+        descalingState = DescalingState::PHASE3;
       }
       break;
-    case DescalingState::DESCALING_PHASE3: // steam wand
+    case DescalingState::PHASE3: // steam wand
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
       setSol2Off();
       setSol3Off();
@@ -76,13 +77,13 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
-          descalingState = DescalingState::DESCALING_PHASE4;
+          descalingState = DescalingState::PHASE4;
         } else {
           descalingState = DescalingState::FINISHED;
         }
       }
       break;
-    case DescalingState::DESCALING_PHASE4: // Brewhead
+    case DescalingState::PHASE4: // Brewhead
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
       setSol2Off();
       setSol3On();
@@ -91,13 +92,13 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
-          descalingState = DescalingState::DESCALING_PHASE5;
+          descalingState = DescalingState::PHASE5;
         } else {
           descalingState = DescalingState::FINISHED;
         }
       }
       break;
-    case DescalingState::DESCALING_PHASE5: // purge
+    case DescalingState::PHASE5: // purge
       currentState.brewSwitchState ? descalingState : descalingState = DescalingState::FINISHED;
       setSol2On();
       setSol3On();
@@ -107,7 +108,7 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
-          descalingState = DescalingState::DESCALING_PHASE1;
+          descalingState = DescalingState::PHASE1;
         } else {
           descalingState = DescalingState::FINISHED;
         }

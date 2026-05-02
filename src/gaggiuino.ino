@@ -13,7 +13,7 @@ SimpleKalmanFilter smoothScalesFlow(0.5f, 0.5f, 0.01f);
 SimpleKalmanFilter smoothConsideredFlow(0.1f, 0.1f, 0.1f);
 
 //default phases. Updated in updateProfilerPhases.
-bool gaggiaSettingsInitialised = false;
+bool gaggiaSettingsInitialized = false;
 bool activeProfileInitialized = false;
 
 ProfileSettings profileSettings;
@@ -34,7 +34,7 @@ SystemState systemState;
 
 void setup(void) {
   LOG_INIT();
-  delay(1000);
+  // delay(1000);
   LOG_INFO("Gaggiuino (fw: %s) booting", AUTO_VERSION);
 
   // Various pins operation mode handling
@@ -53,10 +53,10 @@ void setup(void) {
   // Init the tof sensor
   currentState.waterLevel = 30u;
 
-  // Initialise comms library for talking to the ESP mcu
+  // Initialize comms library for talking to the ESP mcu
   espCommsInit();
 
-  // Initialising the saved values or writing defaults if first start
+  // Initializing the saved values or writing defaults if first start
   eepromInit();
   runningCfg = eepromGetCurrentSettings();
   profileSettings = eepromGetCurrentProfiles();
@@ -76,7 +76,7 @@ void setup(void) {
   LOG_INFO("Pressure sensor init");
 
   // Scales handling
-  scalesInit(runningCfg.system.scalesF1);
+  scalesInit(runningCfg.scales);
   LOG_INFO("Scales init");
 
   pageValuesRefresh();
@@ -99,7 +99,7 @@ void loop(void) {
   relaysActuate();
   modeSelect();
   lcdRefresh();
-  espCommsSendSensorData(runningCfg, currentState, activeProfile, 200);
+  espUpdateState();
   sysHealthCheck();
 }
 
@@ -185,7 +185,7 @@ static void sensorsReadTemperature(void) {
 }
 
 static void relaysActuate(void) {
-  if (selectedOperationalMode == OPERATION_MODES::OPMODE_flush || selectedOperationalMode == OPERATION_MODES::OPMODE_descale) return;
+  if (systemState.operationMode == OperationMode::FLUSH || systemState.operationMode == OperationMode::DESCALE) return;
   static bool relWasNeeded = (currentState.brewActive || currentState.flushActive);
   static unsigned int shotEndTimer = -100000;
   bool relNeeded = (currentState.brewActive || currentState.flushActive);
@@ -208,36 +208,70 @@ static void relaysActuate(void) {
   relWasNeeded = relNeeded;
 }
 
+static Measurement handleTaringAndReadWeight() {
+  if (!systemState.tarePending) { // No tare needed just get weight
+    return scalesGetWeight();
+  }
+
+  // Tare is required. Invoke it.
+  scalesTare();
+  weightMeasurements.clear();
+  Measurement weight = scalesGetWeight();
+
+  if (fabsf(weight.value) < 0.5f) { // Tare was successful. return reading
+    systemState.tarePending = false;
+    return weight;
+  } else {  // Tare was unsuccessful. return 0 weight.
+    return Measurement{ .value=0.f, .millis = millis()};
+  }
+}
+
 static void sensorsReadWeight(void) {
-  uint32_t elapsedTime = millis() - scalesTimer;
+  uint32_t currentMillis = millis();
+  uint32_t elapsedTime = currentMillis - scalesTimer;
+  uint32_t weightBumpTimeout = currentMillis - scalesTimeout;
+  static float initialWeight = 0.f;
 
   if (elapsedTime > GET_SCALES_READ_EVERY) {
     currentState.scalesPresent = scalesIsPresent();
     if (currentState.scalesPresent) {
-      if (currentState.tarePending) {
-        scalesTare();
-        weightMeasurements.clear();
-        weightMeasurements.add(scalesGetWeight());
-        currentState.tarePending = false;
-      }
-      else {
-        weightMeasurements.add(scalesGetWeight());
-      }
-      currentState.weight = abs(weightMeasurements.latest().value) > 0.3f ? weightMeasurements.latest().value : 0.f;
-
+      const auto weight = handleTaringAndReadWeight();
+      weightMeasurements.add(weight);
+      currentState.weight = abs(weightMeasurements.getLatest().value) > 0.3f ? weightMeasurements.getLatest().value : 0.f;
       if (currentState.brewActive) {
-        currentState.shotWeight = currentState.tarePending ? 0.f : currentState.weight;
-        currentState.weightFlow = weightMeasurements.measurementChange().changeSpeed();
+        const float weightFlow = weightMeasurements.getMeasurementChange().speed();
+            // If there's a sudden jump in weight
+        bool isChangeRateHigh = weightFlow > weightRateThreshold;
+        bool isCupPlaced = currentState.weight - initialWeight > 0.f
+                        && currentState.weight - initialWeight >= weightIncreaseThreshold;
+        if (!systemState.tarePending && (isChangeRateHigh || isCupPlaced)) {
+          // Ignore accidental weight bumps
+          if (weightBumpTimeout < GET_SCALES_ACCIDENTAL) {
+            scalesTimer = currentMillis;
+            return;
+          } else { // Weight increased drastically and is constant ? mark for tare.
+            systemState.tarePending = true;
+            scalesTimer = currentMillis;
+            scalesTimeout = currentMillis;
+          }
+        }      
+        currentState.shotWeight = systemState.tarePending ? 0.f : currentState.weight;
+        initialWeight = currentState.shotWeight;
+
+        // Only take flow measurements when tare is not pending.
+        currentState.weightFlow = systemState.tarePending
+                                ? currentState.weightFlow
+                                : fmax(0.f, weightFlow);
         currentState.smoothedWeightFlow = smoothScalesFlow.updateEstimate(currentState.weightFlow);
       }
     }
     scalesTimer = millis();
+    scalesTimeout = currentMillis;
   }
 }
 
 static void sensorsReadPressure(void) {
   uint32_t elapsedTime = millis() - pressureTimer;
-
   if (elapsedTime > GET_PRESSURE_READ_EVERY) {
     float elapsedTimeSec = elapsedTime / 1000.f;
     currentState.pressure = max(0.f, getPressure());
@@ -262,7 +296,7 @@ static void calculateWeightAndFlow(void) {
 
   if (currentState.brewActive) {
     // Marking for tare in case smth has gone wrong and it has exited tare already.
-    if (currentState.weight < -.3f) currentState.tarePending = true;
+    if (currentState.weight < -.3f) systemState.tarePending = true;
 
     if (elapsedTime > REFRESH_FLOW_EVERY) {
       flowTimer = millis();
@@ -312,17 +346,8 @@ static void pageValuesRefresh() {
   homeScreenScalesEnabled = lcdGetHomeScreenScalesEnabled();
   // MODE_SELECT should always be LAST
   selectedOperationalMode = (OPERATION_MODES) lcdGetSelectedOperationalMode();
-
-  lcdLastCurrentPageId = lcdCurrentPageId;
-}
-
-//#############################################################################################
-//############################____OPERATIONAL_MODE_CONTROL____#################################
-//#############################################################################################
-static void modeSelect(void) {
-
   switch (selectedOperationalMode) {
-    //REPLACE ALL THE BELOW WITH OPMODE_auto_profiling
+    //TODO: temporary 
     case OPERATION_MODES::OPMODE_straight9Bar:
     case OPERATION_MODES::OPMODE_justPreinfusion:
     case OPERATION_MODES::OPMODE_justPressureProfile:
@@ -332,23 +357,50 @@ static void modeSelect(void) {
     case OPERATION_MODES::OPMODE_FlowBasedPreinfusionPressureBasedProfiling:
     case OPERATION_MODES::OPMODE_everythingFlowProfiled:
     case OPERATION_MODES::OPMODE_pressureBasedPreinfusionAndFlowProfile:
+      systemState.operationMode = OperationMode::BREW_AUTO;
+      break;
+    case OPERATION_MODES::OPMODE_manual:
+      systemState.operationMode = OperationMode::BREW_MANUAL;
+      break;
+    case OPERATION_MODES::OPMODE_flush:
+      systemState.operationMode = OperationMode::FLUSH;
+      break;
+    case OPERATION_MODES::OPMODE_steam:
+      systemState.operationMode = OperationMode::STEAM;
+      break;
+    case OPERATION_MODES::OPMODE_descale:
+      systemState.operationMode = OperationMode::DESCALE;
+      break;
+    default:
+      break;
+  }
+  lcdLastCurrentPageId = lcdCurrentPageId;
+}
+
+//#############################################################################################
+//############################____OPERATIONAL_MODE_CONTROL____#################################
+//#############################################################################################
+static void modeSelect(void) {
+
+  switch (systemState.operationMode) {
+    case OperationMode::BREW_AUTO:
       if (currentState.hotWaterActive) hotWaterMode(currentState);
       else if (currentState.steamActive) steamCtrl(runningCfg, currentState, activeProfile.waterTemperature);
       else {
         profiling();
       }
       break;
-    case OPERATION_MODES::OPMODE_manual:
-      manualFlowControl();
+    case OperationMode::BREW_MANUAL:
+      manualFlowControl(); //TODO: change to profiling after disabling nextion
       break;
-    case OPERATION_MODES::OPMODE_flush:
+    case OperationMode::FLUSH:
       backFlush(currentState);
       justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
       break;
-    case OPERATION_MODES::OPMODE_steam:
+    case OperationMode::STEAM:
       steamCtrl(runningCfg, currentState, activeProfile.waterTemperature);
       break;
-    case OPERATION_MODES::OPMODE_descale:
+    case OperationMode::DESCALE:
       deScale(runningCfg, currentState);
       break;
     default:
@@ -364,7 +416,7 @@ static void modeSelect(void) {
 static void lcdRefresh(void) {
   uint16_t tempDecimal;
 
-  if (millis() > pageRefreshTimer) {
+  if (millis() > NextionPageRefreshTimer) {
     /*LCD pressure output, as a measure to beautify the graphs locking the live pressure read for the LCD alone*/
     #ifdef BEAUTIFY_GRAPH
       lcdSetPressure(currentState.smoothedPressure * 10.f);
@@ -419,7 +471,7 @@ static void lcdRefresh(void) {
       lcdBrewTimerStop(); // nextion timer stop
     }
 
-    pageRefreshTimer = millis() + REFRESH_SCREEN_EVERY;
+    NextionPageRefreshTimer = millis() + REFRESH_SCREEN_EVERY;
   }
 }
 //#############################################################################################
@@ -482,7 +534,7 @@ void lcdHomeScreenScalesTrigger(void) {
 void lcdBrewGraphScalesTareTrigger(void) {
   LOG_VERBOSE("Predictive scales tare action completed!");
   if (currentState.scalesPresent) {
-    currentState.tarePending = true;
+    systemState.tarePending = true;
   }
   else {
     currentState.shotWeight = 0.f;
@@ -503,46 +555,71 @@ void lcdQuickProfileSwitch(void) {
   lcdShowPopup("Profile switched!");
 }
 
-void onProfileReceived(Profile& newProfile) {
+//#############################################################################################
+//################################____EPS_COMMS_CONTROL___###################################
+//#############################################################################################
+
+static void espUpdateState(void) {
+  if (millis() > pageRefreshTimer) {
+ 
+    if (currentState.brewActive && systemState.operationMode == OperationMode::BREW_AUTO) {
+      espCommsSendShotData(buildShotSnapshot(millis() - brewingTimer, currentState, phaseProfiler), 100);
+    } else {
+      espCommsSendSystemState(systemState, 1000);
+      espCommsSendSensorData(runningCfg, currentState, activeProfile, 500);
+    }
+    pageRefreshTimer = millis() + REFRESH_ESP_DATA_EVERY;
+  }
+}
+
+void onProfileReceived(const Profile& newProfile) {
   activeProfile = newProfile;
   activeProfileInitialized = true;
 }
 
-void onGaggiaSettingsReceived(GaggiaSettings& newSettings) {
-  gaggiaSettingsInitialised = true;
+void onGaggiaSettingsReceived(const GaggiaSettings& newSettings) {
+  GaggiaSettings previous = runningCfg;
   runningCfg = newSettings;
+  if (!gaggiaSettingsInitialized) {
+    gaggiaSettingsInitialized = true;
+    return;
+  }
+  if (!(previous.scales == runningCfg.scales)) {
+    scalesInit(runningCfg.scales);
+  }
 }
 
-void onManualBrewPhaseReceived(Phase& phase) {
+void onManualBrewPhaseReceived(const Phase& phase) {
   if (manualProfile.phaseCount() != 1) {
     manualProfile.phases.resize(1);
   }
   manualProfile.phases[0] = phase;
 }
 
-void onOperationModeReceived(OperationMode operationMode) {
-  systemState.operationMode = operationMode;
+void onUpdateSystemStateCommandReceived(const UpdateSystemStateComand& command) {
+  systemState.operationMode = command.operationMode;
+  systemState.tarePending = systemState.tarePending || command.tarePending;
 }
 
-void onBoilerSettingsReceived(BoilerSettings& boilerSettings) {
+void onBoilerSettingsReceived(const BoilerSettings& boilerSettings) {
   runningCfg.boiler = boilerSettings;
 }
 
-void onLedSettingsReceived(LedSettings& ledSettings) {
+void onLedSettingsReceived(const LedSettings& ledSettings) {
   runningCfg.led = ledSettings;
 }
 
-void onSystemSettingsReceived(SystemSettings& systemSettings) {
+void onSystemSettingsReceived(const SystemSettings& systemSettings) {
   runningCfg.system = systemSettings;
 }
 
-void onBrewSettingsReceived(BrewSettings& brewSettings) {
+void onBrewSettingsReceived(const BrewSettings& brewSettings) {
   runningCfg.brew = brewSettings;
 }
 
 void onTareCommandReceived() {
   LOG_VERBOSE("Tare scales");
-  if (currentState.scalesPresent) currentState.tarePending = true;
+  if (currentState.scalesPresent) systemState.tarePending = true;
 }
 
 //#############################################################################################
@@ -552,11 +629,9 @@ void onTareCommandReceived() {
 static void profiling(void) {
   if (currentState.brewActive) { //runs this only when brew button activated and pressure profile selected
     uint32_t timeInShot = millis() - brewingTimer;
-    phaseProfiler.setProfile(activeProfile);
+    phaseProfiler.setProfile(systemState.operationMode == OperationMode::BREW_AUTO ? activeProfile : manualProfile);
     phaseProfiler.updatePhase(timeInShot, currentState);
     const CurrentPhase& currentPhase = phaseProfiler.getCurrentPhase();
-    ShotSnapshot shotSnapshot = buildShotSnapshot(timeInShot, currentState, phaseProfiler);
-    espCommsSendShotData(shotSnapshot, 100);
 
     if (phaseProfiler.isFinished()) {
       setPumpOff();
@@ -576,13 +651,13 @@ static void profiling(void) {
   else {
     setPumpOff();
   }
-  // Keep that water at temp
-  if (millis() - iddleTimer < 1000 * 60 * 90){ //safety if machine is forgotten on
-    justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
-  } else {
+  if (millis() - iddleTimer > 1000 * 60 * 90){ //safety if machine is forgotten on
     setBoilerOff();
     digitalWrite(shutdownPin, LOW);
   }
+  // Keep that water at temp
+  // TODO: If active phase overrides the water temperature, then send the active phase's temp
+  justDoCoffee(runningCfg, currentState, activeProfile.waterTemperature);
 }
 
 static void manualFlowControl(void) {
@@ -612,7 +687,7 @@ static void modeDetect(void) {
   currentState.flushActive = false;
   currentState.hotWaterActive = false;
 
-  if (selectedOperationalMode == OPERATION_MODES::OPMODE_flush || selectedOperationalMode == OPERATION_MODES::OPMODE_descale){
+  if (systemState.operationMode == OperationMode::FLUSH_AUTO || systemState.operationMode == OperationMode::DESCALE){
     return;
   }
 
@@ -640,8 +715,8 @@ static void modeDetect(void) {
       brewParamsReset();
       paramsReset = true;
     }
-    // needs to be here as it creates a locking state soemtimes if not kept up to date during brew
-    // mainly when shotWeight restriction kick in.
+    // needs to be here as it creates a locking state sometimes if not kept up to date during brew
+    // mainly when shotWeight restriction kicks in.
     systemHealthTimer = millis() + HEALTHCHECK_EVERY;
   } else {
     currentState.pumpCPS = getAndResetClickCounter();
@@ -654,7 +729,7 @@ static void modeDetect(void) {
 }
 
 static void brewParamsReset(void) {
-  currentState.tarePending = true;
+  systemState.tarePending = true;
   currentState.shotWeight  = 0.f;
   currentState.pumpFlow    = 0.f;
   currentState.weight      = 0.f;
@@ -707,19 +782,20 @@ static inline void sysHealthCheck() {
 }
 
 static void updateStartupTimer(void) {
-  lcdSetUpTime(getTimeSinceInit() / 1000);
+  systemState.timeAlive = getTimeSinceInit() / 1000;
+  lcdSetUpTime(systemState.timeAlive);
 }
 
 static void cpsInit(GaggiaSettings &runningCfg) {
   int cps = getCPS();
   if (cps > 110) { // double 60 Hz
-    runningCfg.system.powerLineFrequency = 60u;
+    currentState.powerLineFrequency = 60u;
   } else if (cps > 80) { // double 50 Hz
-    runningCfg.system.powerLineFrequency = 50u;
+    currentState.powerLineFrequency = 50u;
   } else if (cps > 55) { // 60 Hz
-    runningCfg.system.powerLineFrequency = 60u;
+    currentState.powerLineFrequency = 60u;
   } else if (cps > 0) { // 50 Hz
-    runningCfg.system.powerLineFrequency = 50u;
+    currentState.powerLineFrequency = 50u;
   }
 }
 

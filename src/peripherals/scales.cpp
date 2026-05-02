@@ -25,7 +25,7 @@ unsigned char scale_clk = OUTPUT;
 unsigned char scale_clk = OUTPUT_OPEN_DRAIN;
 #endif
 
-void scalesInit(float scalesF1) {
+void scalesInit(const ScalesSettings& settings) {
   hwScalesPresent = false;
   // Forced predicitve scales in case someone with actual hardware scales wants to use them.
   if (FORCE_PREDICTIVE_SCALES) {
@@ -36,7 +36,7 @@ void scalesInit(float scalesF1) {
   auto& loadCells = LoadCellSingleton::getInstance();
   loadCells.begin(HX711_dout_1, HX711_sck_1, 128U, scale_clk);
   pinMode(HX711_dout_1, INPUT_PULLUP);
-  loadCells.set_scale(scalesF1);
+  loadCells.set_scale(settings.hwScalesF1);
   loadCells.power_up();
 
   if (loadCells.wait_ready_timeout(1000, 10)) {

@@ -7,8 +7,9 @@
 #endif
 
 #include "measurements.h"
+#include "gaggia_settings.h"
 
-void scalesInit(float scalesF1);
+void scalesInit(const ScalesSettings& settings);
 void scalesTare(void);
 Measurement scalesGetWeight(void);
 bool scalesIsPresent(void);
