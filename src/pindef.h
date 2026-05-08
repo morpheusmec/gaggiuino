@@ -7,7 +7,7 @@
 #define thermoDI      PA7
 #define thermoCS      PA6
 #define thermoCLK     PA5
-#define thermoRDY     PB9
+#define thermoRDY     PB5
 
 #define cup1DtcPin    PA0
 #define cup2DtcPin    PC13
@@ -18,7 +18,7 @@
 #define pumpPin       PA1
 #define sol3Pin       PB3
 #define sol2Pin       PA15
-#define heaterPin     PB5
+#define heaterPin     PB9
 #define shutdownPin   PA4
 
 #define HX711_sck_1   PB0
