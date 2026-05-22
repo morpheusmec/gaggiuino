@@ -26,6 +26,8 @@ PredictiveWeight predictiveWeight;
 
 SensorState currentState;
 
+PCF8575 PCF(0x20);
+
 OPERATION_MODES selectedOperationalMode;
 
 GaggiaSettings runningCfg;
@@ -127,7 +129,7 @@ static bool cup1_read_switch(void){
   
   if (reading != last_reading) last_time = millis();
   last_reading = reading;
-  if ((millis() - last_time) >= 1){
+  if ((millis() - last_time) >= 20){
     if(last_state != reading){
       if (reading) press = true;
     last_state = reading;
@@ -145,7 +147,7 @@ static bool cup2_read_switch(void){
   
   if (reading != last_reading) last_time = millis();
   last_reading = reading;
-  if ((millis() - last_time) >= 1){
+  if ((millis() - last_time) >= 20){
     if(last_state != reading){
       if (reading) press = true;
     last_state = reading;
@@ -155,6 +157,7 @@ static bool cup2_read_switch(void){
 }
 
 static void sensorReadSwitches(void) {
+  readPCF();
   bool cup1_press = cup1_read_switch();
   bool cup2_press = cup2_read_switch();
 

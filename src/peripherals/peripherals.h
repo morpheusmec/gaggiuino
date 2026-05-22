@@ -5,17 +5,12 @@
 #include "pindef.h"
 #include "peripherals.h"
 #include <Arduino.h>
+#include <PCF8575.h>
+
+extern PCF8575 PCF;
 
 static inline void pinInit(void) {
-  pinMode(cup1DtcPin,  INPUT_PULLUP);
-  pinMode(cup2DtcPin,  INPUT_PULLUP);
-  pinMode(steamPin, INPUT_PULLUP);
-  pinMode(waterPin, INPUT_PULLUP);
-
-  digitalWrite(sol2Pin, HIGH);
-  pinMode(sol2Pin,  OUTPUT_OPEN_DRAIN);
-  digitalWrite(sol3Pin, HIGH);
-  pinMode(sol3Pin,  OUTPUT_OPEN_DRAIN);
+  PCF.begin();
 
   pinMode(thermoRDY, INPUT_PULLUP);
   digitalWrite(shutdownPin, HIGH);
@@ -26,39 +21,40 @@ static inline bool tempReady(void) {
   return digitalRead(thermoRDY) == LOW;
 }
 
+static inline void readPCF(void){
+  PCF.read16();
+}
+
 static inline bool cup1BtnState(void) {
-  return digitalRead(cup1DtcPin) == LOW;
+  return (PCF.value() & (1 << cup1Btn)) == LOW;
 }
 
 static inline bool cup2BtnState(void) {
-  return digitalRead(cup2DtcPin) == LOW;
+  return (PCF.value() & (1 << cup2Btn)) == LOW;
 }
 
-static inline void setSol2On(void) {
-  digitalWrite(sol2Pin, LOW); 
-}
-
-static inline void setSol2Off(void) {
-  digitalWrite(sol2Pin, HIGH); 
-}
-
-static inline void setSol3On(void) {
-  digitalWrite(sol3Pin, LOW); 
-}
-
-static inline void setSol3Off(void) {
-  digitalWrite(sol3Pin, HIGH); 
-}
-
-
-// Returns HIGH when switch is OFF and LOW when ON
-// pin will be high when switch is ON.
 static inline bool steamBtnState(void) {
-  return digitalRead(steamPin) == LOW; // pin will be low when switch is ON.
+  return (PCF.value() & (1 << steamBtn)) == LOW;
 }
 
 static inline bool waterBtnState(void) {
-  return digitalRead(waterPin) == LOW; // pin will be low when switch is ON.
+  return (PCF.value() & (1 << hotWaterBtn)) == LOW;
+}
+  
+static inline void setSol2On(void) {
+  PCF.write(sol2Pin, LOW);
+}
+
+static inline void setSol2Off(void) {
+  PCF.write(sol2Pin, HIGH);
+}
+
+static inline void setSol3On(void) {
+  PCF.write(sol3Pin, LOW);
+}
+
+static inline void setSol3Off(void) {
+  PCF.write(sol3Pin, HIGH);
 }
 
 #endif
