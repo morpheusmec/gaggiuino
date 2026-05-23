@@ -43,11 +43,6 @@ struct BrewSettings {
   bool     brewDeltaState;    /* Should gaggia add more heating power during a shot to compensate for cold water entering */
 };
 
-struct ProfileSettings {
-  uint8_t              activeProfileIndex; /* Currently selected profile */
-  std::vector<Profile> savedProfiles;      /* Saved profiles array */
-};
-
 struct LedSettings {
   bool state;        /* Should the led be ON or OFF */
   bool disco;        /* Should we activate disco mode during brew */

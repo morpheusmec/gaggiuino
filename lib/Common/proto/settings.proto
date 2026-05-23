@@ -25,11 +25,6 @@ message BrewSettingsDto {
   bool basketPrefill = 3;
 }
 
-message ProfileSettingsDto {
-  uint32 activeProfileIndex = 1;
-  repeated ProfileDto savedProfiles = 2;
-}
-
 message LedSettingsDto {
   message Color {
     uint32 R = 1;

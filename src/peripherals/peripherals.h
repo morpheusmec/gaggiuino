@@ -12,6 +12,11 @@ extern PCF8575 PCF;
 static inline void pinInit(void) {
   PCF.begin();
 
+  PCF.write(powerLED, 0);
+  PCF.write(pgnLED, 0);
+  PCF.write(cup1LED, 0);
+  PCF.write(cup2LED, 0);
+
   pinMode(thermoRDY, INPUT_PULLUP);
   digitalWrite(shutdownPin, HIGH);
   pinMode(shutdownPin, OUTPUT_OPEN_DRAIN);

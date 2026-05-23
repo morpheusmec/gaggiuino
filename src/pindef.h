@@ -28,6 +28,7 @@
 #define zcPin         PC15
 #define pumpPin       PA1
 #define heaterPin     PB9
+#define buzzerPin     PB1
 #define shutdownPin   PA4
 
 #define HX711_sck_1   PB0

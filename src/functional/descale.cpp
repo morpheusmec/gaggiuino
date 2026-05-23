@@ -2,7 +2,6 @@
 #include "descale.h"
 #include "just_do_coffee.h"
 #include "../peripherals/internal_watchdog.h"
-#include "../lcd/lcd.h"
 #include "system_state.h"
 
 DescalingState descalingState = DescalingState::IDLE;
@@ -31,11 +30,11 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         setPumpToPercentage(pumpSpeed);
       } else {
         setPumpOff();
-        lcdShowPopup("Turn knob to neutral position");
+        espCommsSendNotification(Notification::info("Turn knob to neutral position"));
         descalingTimer = millis();
       }
       if (millis() - descalingTimer > 3000) {
-        lcdSetDescaleCycle(descalingCycle++);
+        // lcdSetDescaleCycle(descalingCycle++); TODO
         if (descalingCycle < 100) {
           descalingTimer = millis();
           descalingState = DescalingState::PHASE2;
@@ -52,12 +51,12 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         setPumpToPercentage(pumpSpeed);
       } else {
         setPumpOff();
-        lcdShowPopup("Turn knob to hot water position");
+        espCommsSendNotification(Notification::info("Turn knob to hot water position"));
         descalingTimer = millis();
       }
       if (millis() - descalingTimer > time_each) {
         descalingTimer = millis();
-        lcdSetDescaleCycle(descalingCycle++);
+        // lcdSetDescaleCycle(descalingCycle++);
         descalingState = DescalingState::PHASE3;
       }
       break;
@@ -69,12 +68,12 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
         setPumpToPercentage(pumpSpeed);
       } else {
         setPumpOff();
-        lcdShowPopup("Turn knob to steam position");
+        espCommsSendNotification(Notification::info("Turn knob to steam position"));
         descalingTimer = millis();
       }
       if (millis() - descalingTimer > time_each) {
         solenoidBeat3W();
-        lcdSetDescaleCycle(descalingCycle++);
+        // lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
           descalingState = DescalingState::PHASE4;
@@ -89,7 +88,7 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
       setSol3On();
       setPumpToPercentage(pumpSpeed);
       if (millis() - descalingTimer > time_each) {
-        lcdSetDescaleCycle(descalingCycle++);
+        // lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
           descalingState = DescalingState::PHASE5;
@@ -105,7 +104,7 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
       setPumpToPercentage(pumpSpeed);
       if (millis() - descalingTimer > 3000) {
         solenoidBeat2W();
-        lcdSetDescaleCycle(descalingCycle++);
+        // lcdSetDescaleCycle(descalingCycle++);
         if (descalingCycle < 100) {
           descalingTimer = millis();
           descalingState = DescalingState::PHASE1;
@@ -121,8 +120,8 @@ void deScale(GaggiaSettings &settings, SensorState &currentState) {
       currentState.brewSwitchState ? descalingState = DescalingState::FINISHED : descalingState = DescalingState::IDLE;
       currentState.brewSwitchState = false;
       if (millis() - descalingTimer > 1000) {
-        lcdBrewTimerStop();
-        lcdShowPopup("FINISHED");
+        // lcdBrewTimerStop();
+        espCommsSendNotification(Notification::success("Descaling finished"));
         descalingTimer = millis();
       }
       break;

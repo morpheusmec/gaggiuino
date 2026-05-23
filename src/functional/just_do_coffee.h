@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "../peripherals/peripherals.h"
 #include "../peripherals/pump.h"
-#include "../eeprom_data/eeprom_data.h"
+#include "gaggia_settings.h"
 #include "../log.h"
 #include "sensors_state.h"
 #include <Arduino.h>

@@ -184,27 +184,5 @@ public:
   };
 };
 
-class ProfileSettingsConverter : public NanoPb::Converter::MessageConverter<ProfileSettingsConverter, ProfileSettings, ProfileSettingsDto, ProfileSettingsDto_fields> {
-public:
-  using ProfileArrayConverter = ArrayConverter<ProfileConverter, std::vector<Profile>>;
-
-  static ProtoType encoderInit(const LocalType& local) {
-    return  ProfileSettingsDto {
-        .activeProfileIndex = local.activeProfileIndex,
-        .savedProfiles = ProfileArrayConverter::encoderCallbackInit(local.savedProfiles),
-      };
-  };
-
-  static ProtoType decoderInit(LocalType& local) {
-    return ProfileSettingsDto{
-        .savedProfiles = ProfileArrayConverter::decoderCallbackInit(local.savedProfiles),
-    };
-  };
-
-  static bool decoderApply(const ProtoType& proto, LocalType& local) {
-    local.activeProfileIndex = proto.activeProfileIndex;
-    return true;
-  };
-};
 
 #endif

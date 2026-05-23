@@ -2,7 +2,6 @@
 #include "pressure_sensor.h"
 #include "pindef.h"
 #include "ADS1X15.h"
-#include "../lcd/lcd.h"
 #include "../log.h"
 #include "i2c_bus_reset.h"
 #include "esp_comms.h"
@@ -58,7 +57,6 @@ void getAdsError(void) {
   char tmp[25];
   unsigned int check = snprintf(tmp, sizeof(tmp), "ADS error code: %i", result);
   if (check > 0 && check <= sizeof(tmp)) {
-    lcdShowPopup(tmp);
     espCommsSendNotification(Notification::error(tmp));
   }
 }
@@ -79,7 +77,6 @@ void i2cResetState(void) {
         adsInit();
       }
       else {
-        lcdShowPopup(tmp);
         espCommsSendNotification(Notification::error(tmp));
       }
     }

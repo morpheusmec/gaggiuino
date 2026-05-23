@@ -4,7 +4,7 @@
 
 #include <Arduino.h>
 #include "sensors_state.h"
-#include "../eeprom_data/eeprom_data.h"
+#include "gaggia_settings.h"
 
 const unsigned long DESCALE_PHASE1_EVERY = 30000UL; //30000 // short pump pulses during descale
 const unsigned long DESCALE_PHASE2_EVERY = 60000UL; //60000 // long pause for scale softening

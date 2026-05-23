@@ -1,6 +1,5 @@
 /* 09:32 15/03/2023 - change triggering comment */
 #include "just_do_coffee.h"
-#include "../lcd/lcd.h"
 
 unsigned long steamTime;
 float heatAdded;
@@ -28,7 +27,6 @@ inline static float TEMP_DELTA(float d, const SensorState &currentState) {
 }
 
 void justDoCoffee(const GaggiaSettings &settings, SensorState &currentState,  float waterTemperature) {
-  lcdTargetState((int)HEATING::MODE_brew); // setting the target mode to "brew temp"
   float brewTempSetPoint = waterTemperature + settings.boiler.offsetTemp;
   float sensorTemperature = currentState.temperature + settings.boiler.offsetTemp;
   uint32_t heatTime = micros();
@@ -77,7 +75,6 @@ void setBoilerOff(){
 //################################____STEAM_POWER_CONTROL____##################################
 //#############################################################################################
 void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float iddleWaterTemperature) {
-  currentState.steamActive ? lcdTargetState((int)HEATING::MODE_steam) : lcdTargetState((int)HEATING::MODE_brew); // setting the steam/hot water target temp
   // steam temp control, needs to be aggressive to keep steam pressure acceptable
   float steamTempSetPoint = settings.boiler.steamSetPoint + settings.boiler.offsetTemp;
   float sensorTemperature = currentState.temperature + settings.boiler.offsetTemp;

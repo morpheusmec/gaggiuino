@@ -6,8 +6,6 @@
 #include <SimpleKalmanFilter.h>
 
 #include "log.h"
-#include "eeprom_data/eeprom_data.h"
-#include "lcd/lcd.h"
 #include "peripherals/internal_watchdog.h"
 #include "peripherals/pump.h"
 #include "peripherals/pressure_sensor.h"
@@ -58,7 +56,6 @@ const float weightIncreaseThreshold = 40.f; // Accounting for placing a cup on t
 
 //Timers
 unsigned long systemHealthTimer;
-unsigned long NextionPageRefreshTimer;
 unsigned long pageRefreshTimer;
 unsigned long pressureTimer;
 unsigned long brewingTimer;
@@ -74,7 +71,6 @@ Measurements weightMeasurements(4);
 
 //PP&PI variables
 int preInfusionFinishedPhaseIdx = 3;
-bool homeScreenScalesEnabled = false;
 
 // Other util vars
 float previousSmoothedPressure;

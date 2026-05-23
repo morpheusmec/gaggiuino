@@ -16,37 +16,35 @@ namespace esp {
   void initializeState() {
     // Load settings from ESP
     requestDataTimer = 0;
-    // while (!receivedSettingsAtLeastOnce) {
-    //   if (millis() - requestDataTimer > 1000) {
-    //     espCommsRequestData(McuCommsMessageType::MCUC_DATA_ALL_SETTINGS);
-    //     requestDataTimer = millis();
-    //   }
-    //   espCommsReadData();
-    //   delay(2);
-    // }
-    LOG_INFO("Skipped ESP Settings Init"); //TODO: temporary
+    while (!receivedSettingsAtLeastOnce) {
+      if (millis() - requestDataTimer > 1000) {
+        espCommsRequestData(McuCommsMessageType::MCUC_DATA_ALL_SETTINGS);
+        requestDataTimer = millis();
+      }
+      espCommsReadData();
+      delay(2);
+    }
 
     // Load profile from ESP
     requestDataTimer = 0;
-    // while (!receivedProfileAtLeastOnce) {
-    //   if (millis() - requestDataTimer > 1000) {
-    //     espCommsRequestData(McuCommsMessageType::MCUC_DATA_PROFILE);
-    //     requestDataTimer = millis();
-    //   }
-    //   espCommsReadData();
-    //   delay(2);
-    // }
-    LOG_INFO("Skipped ESPProfile Init"); //TODO: Temporary
+    while (!receivedProfileAtLeastOnce) {
+      if (millis() - requestDataTimer > 1000) {
+        espCommsRequestData(McuCommsMessageType::MCUC_DATA_PROFILE);
+        requestDataTimer = millis();
+      }
+      espCommsReadData();
+      delay(2);
+    }
   }
 }
 
 void handleMessageReceived(McuCommsMessageType messageType, std::vector<uint8_t>& data);
 void espCommsInit() {
   // USART_ESP.begin(921600);
-  USART_ESP.begin(460800);
+  USART_LCD.begin(460800);
 
   // mcuComms.setDebugPort(&USART_ESP);
-  esp::mcuComms.begin(USART_ESP, 1000); 
+  esp::mcuComms.begin(USART_LCD, 1000); 
   // esp::mcuComms.begin(USART_ESP); 
 
   // Set callbacks
