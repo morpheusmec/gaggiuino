@@ -162,6 +162,7 @@ static void sensorReadSwitches(void) {
 static void sensorsReadTemperature(void) {
   if (tempReady()) {
     currentState.temperature = thermocoupleRead() - runningCfg.boiler.offsetTemp;
+    currentState.waterTemperature = currentState.temperature; // Assuming water temperature is the same as boiler temperature
   }
 }
 
@@ -355,7 +356,7 @@ static void espUpdateState(void) {
       espCommsSendShotData(buildShotSnapshot(millis() - brewingTimer, currentState, phaseProfiler), 100);
     } else {
       espCommsSendSystemState(systemState, 1000);
-      espCommsSendSensorData(runningCfg, currentState, activeProfile, 500);
+      espCommsSendSensorData(runningCfg, currentState, activeProfile, 200);
     }
     pageRefreshTimer = millis() + REFRESH_ESP_DATA_EVERY;
   }
@@ -543,6 +544,7 @@ static inline void sysHealthCheck() {
         espCommsSendNotification(Notification::warn("TEMP READ ERROR"));
       }
       currentState.temperature  = thermocoupleRead() - runningCfg.boiler.offsetTemp;  // Making sure we're getting a value
+      currentState.waterTemperature = currentState.temperature;
       thermoTimer = millis() + GET_KTYPE_READ_EVERY;
     }
   }

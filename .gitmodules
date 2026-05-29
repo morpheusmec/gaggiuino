@@ -1,0 +1,3 @@
+[submodule "webserver/ui"]
+	path = webserver/ui
+	url = https://github.com/morpheusmec/BrevillinoScreen.git
