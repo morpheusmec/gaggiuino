@@ -1,0 +1,12 @@
+# Normalize text files and treat unknown files as binary when necessary
+* text=auto eol=lf
+
+# Explicitly mark common binary formats
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bin binary
+*.zip binary
+*.pdf binary
