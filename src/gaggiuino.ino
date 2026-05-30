@@ -407,10 +407,6 @@ void onBrewSettingsReceived(const BrewSettings& brewSettings) {
   runningCfg.brew = brewSettings;
 }
 
-void onTareCommandReceived() {
-  if (currentState.scalesPresent) systemState.tarePending = true;
-}
-
 //#############################################################################################
 //###############################____PROFILING_CONTROL____#####################################
 //#############################################################################################

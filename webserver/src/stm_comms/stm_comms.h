@@ -18,7 +18,6 @@ void stmCommsSendLedSettings(const LedSettings& settings);
 void stmCommsSendSystemSettings(const SystemSettings& settings);
 void stmCommsSendScalesSettings(const ScalesSettings& settings);
 void stmCommsSendUpdateSystemState(const UpdateSystemStateComand& state);
-void stmCommsSendTare();
 
 
 // To be defined elsewhere

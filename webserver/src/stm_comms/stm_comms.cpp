@@ -192,10 +192,3 @@ void stmCommsSendUpdateSystemState(const UpdateSystemStateComand& state) {
   );
   xSemaphoreGiveRecursive(mcucLock);
 }
-
-void stmCommsSendTare() {
-  if (xSemaphoreTakeRecursive(mcucLock, portMAX_DELAY) == pdFALSE) return;
-  mcuComms.sendMessage(McuCommsMessageType::MCUC_CMD_TARE);
-  xSemaphoreGiveRecursive(mcucLock);
-}
-

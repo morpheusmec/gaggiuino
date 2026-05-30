@@ -46,10 +46,6 @@ void setup() {
   vTaskDelete(NULL);     //Delete own task by passing NULL(task handle can also be used)
 }
 
-void TareButton(lv_event_t* e){
-  stmCommsSendTare();
-}
-
 void loop() {
   vTaskDelete(NULL);
 }

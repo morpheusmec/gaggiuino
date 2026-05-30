@@ -209,10 +209,6 @@ void handleMessageReceived(McuCommsMessageType messageType, std::vector<uint8_t>
     onUpdateSystemStateCommandReceived(command);
     break;
   }
-  case McuCommsMessageType::MCUC_CMD_TARE: {
-    onTareCommandReceived();
-    break;
-  }
   default: // Ignore message in all other cases
     break;
   }
