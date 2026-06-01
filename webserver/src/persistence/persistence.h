@@ -25,4 +25,5 @@ namespace persistence {
 
 } // namespace state
 
+extern void onProfilePersistenceChange(void);
 #endif

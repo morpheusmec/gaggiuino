@@ -112,6 +112,7 @@ namespace persistence {
     preferences.putUInt(KEY_ACTIVE_PROFILE_ID.c_str(), activeProfileId);
 
     xSemaphoreGiveRecursive(persistenceLock);
+    onProfilePersistenceChange();
     return true;
   }
 
@@ -130,6 +131,7 @@ namespace persistence {
     }
 
     xSemaphoreGiveRecursive(persistenceLock);
+    onProfilePersistenceChange();
     return true;
   }
 
@@ -143,9 +145,7 @@ namespace persistence {
     if (profilePointer == profileDictionary.profiles.end()) { // the id does not exist
       profileDictionary.profiles.push_back(SavedProfile{ .id = id, .name = profile.name });
       updateDictionary = true;
-    }
-
-    if (profilePointer->name != profile.name) { // if name changed update the dictionary
+    } else if (profilePointer->name != profile.name) { // if name changed update the dictionary
       profilePointer->name = profile.name;
       updateDictionary = true;
     }
@@ -156,6 +156,7 @@ namespace persistence {
     saveProtoResource<ProfileConverter>(KEY_PROFILE(id), profile);
 
     xSemaphoreGiveRecursive(persistenceLock);
+    onProfilePersistenceChange();
     return true;
   }
 
