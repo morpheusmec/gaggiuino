@@ -90,7 +90,7 @@ void onDescalingProgressReceived(const DescalingProgress& progress) {
 void state::onActiveProfileUpdated(const Profile& profile) {
   stmCommsSendProfile(state::getActiveProfile());
   wsSendActiveProfileUpdated();
-  createProfileButtons();
+  profileUpdated = true;
 }
 void state::onAllSettingsUpdated(const GaggiaSettings& settings) {
   stmCommsSendGaggiaSettings(state::getSettings());
@@ -135,5 +135,5 @@ void state::onUpdateSystemStateCommandSubmitted(const UpdateSystemStateComand& c
 // -------------------- Handle persistence callbacks -----------------------
 // ------------------------------------------------------------------------
 void onProfilePersistenceChange() {
-  createProfileButtons();
+  profileUpdated = true;
 }
