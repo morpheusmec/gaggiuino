@@ -84,7 +84,7 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float 
   static double flushingDeltaT = 0;
 
   if (currentState.steamSwitchState) steamTime = millis();
-  if (currentState.temperature > 135.f || currentState.temperature > steamTempSetPoint) readyToSteam = true;
+  if (currentState.temperature > steamTempSetPoint - 15.f) readyToSteam = true;
 
   if (millis() - steamTime >= STEAM_TIMEOUT || flushingStarted){
     readyToSteam = false;
@@ -103,13 +103,13 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float 
     flushingDeltaT = fmax(0, currentState.temperature - iddleWaterTemperature);
     currentState.brewSwitchState = false;
     currentState.flushSwitchState = false;
-
   } else{
     currentState.brewSwitchState = false;
     currentState.flushSwitchState = false;
   }
 
   if (flushingStarted){
+    frontPanelLeds.setState(FrontLedsState::STEAM_FLUSHING);
     if (millis() - flushStartTime < (uint32_t) (200. * flushingDeltaT)){
       setPumpFullOn();
     }else{
@@ -117,9 +117,13 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float 
       currentState.steamActive = false;
       flushingStarted = false;
     }
-  } else if (readyToSteam && currentState.steamSwitchState){
-     setPumpToPercentage(0.05);
+  } else if (!readyToSteam){
+    frontPanelLeds.setState(FrontLedsState::STEAM_HEATING);
+  } else if (currentState.steamSwitchState){
+    frontPanelLeds.setState(FrontLedsState::STEAMING);
+    setPumpToPercentage(0.05);
   } else {
+    frontPanelLeds.setState(FrontLedsState::STEAM_READY);
     setPumpOff();
   }
 
@@ -128,7 +132,7 @@ void steamCtrl(const GaggiaSettings &settings, SensorState &currentState, float 
     currentState.steamActive = false;
     readyToSteam = false;
     flushingStarted = false;
-    }
+  }
 }
 
 /*Water mode and all that*/

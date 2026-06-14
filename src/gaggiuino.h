@@ -6,6 +6,7 @@
 #include <SimpleKalmanFilter.h>
 
 #include "log.h"
+#include "peripherals/front_panel_leds.h"
 #include "peripherals/internal_watchdog.h"
 #include "peripherals/pump.h"
 #include "peripherals/pressure_sensor.h"

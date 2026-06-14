@@ -10,6 +10,7 @@
 #include "sensors_state.h"
 #include <Arduino.h>
 #include "PIDController.h"
+#include "../peripherals/front_panel_leds.h"
 
 
 const uint32_t STEAM_TIMEOUT = 180000UL; // steam mode timeout
@@ -17,6 +18,8 @@ const float MAX_WATER_TEMP = 95.f; // max temp allowed in hot water mode
 const float steamThreshold_ = 11.f; // max allowed pressure before heaters are disabled
 const float activeSteamPressure_ = 2.f; // DreamSteam enabling threshold.
 const float passiveSteamPressure_ = 3.f; // DreamSteam disabling threshold.
+
+extern FrontPanelLeds frontPanelLeds;
 
 enum class HEATING {
   MODE_brew,

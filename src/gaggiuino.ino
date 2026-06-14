@@ -23,6 +23,7 @@ PredictiveWeight predictiveWeight;
 SensorState currentState;
 
 PCF8575 PCF(0x20);
+FrontPanelLeds frontPanelLeds(PCF);
 
 OPERATION_MODES selectedOperationalMode;
 
@@ -37,6 +38,9 @@ void setup(void) {
   // Various pins operation mode handling
   pinInit();
   LOG_INFO("Pin init");
+
+  frontPanelLeds.setState(FrontLedsState::IDDLE);
+  frontPanelLeds.updateLeds();
 
   #if defined(DEBUG_ENABLED)
     // Debug init if enabled
@@ -80,6 +84,7 @@ void loop(void) {
   modeDetect();
   relaysActuate();
   modeSelect();
+  frontPanelLeds.updateLeds();
   espUpdateState();
   sysHealthCheck();
 }
@@ -163,6 +168,9 @@ static void sensorsReadTemperature(void) {
   if (tempReady()) {
     currentState.temperature = thermocoupleRead() - runningCfg.boiler.offsetTemp;
     currentState.waterTemperature = currentState.temperature; // Assuming water temperature is the same as boiler temperature
+  }
+  if (!systemState.startupInitFinished && currentState.waterTemperature > activeProfile.waterTemperature - 0.5f) {
+    systemState.startupInitFinished = true;
   }
 }
 
@@ -463,12 +471,21 @@ static void modeDetect(void) {
   } else if (currentState.hotWaterSwitchState){
     currentState.hotWaterActive = true;
     currentState.steamActive = false;
+    frontPanelLeds.setState(FrontLedsState::HOTWATER);
   } else if (!currentState.steamActive && !currentState.hotWaterActive){
     if (currentState.brewSwitchState){
       currentState.brewActive = true;
+      frontPanelLeds.setState(FrontLedsState::BREWING);
     } else if (currentState.flushSwitchState){
       currentState.flushActive = true;
+      frontPanelLeds.setState(FrontLedsState::FLUSHING);
     } 
+  }
+  if (!currentState.steamActive && !currentState.hotWaterActive && !currentState.brewActive && !currentState.flushActive){
+    frontPanelLeds.setState(FrontLedsState::IDDLE);
+  }
+  if (!systemState.startupInitFinished && frontPanelLeds.getState() == FrontLedsState::IDDLE) {
+    frontPanelLeds.setState(FrontLedsState::STARTUP);
   }
 
   if (currentState.brewActive || currentState.flushActive || currentState.steamActive || currentState.hotWaterActive){
