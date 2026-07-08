@@ -34,7 +34,7 @@ void webServerSetup() {
   LOG_INFO("Starting up web server on port %d...", webserver::PORT_NUMBER);
   webserver::server.begin();
 
-  xTaskCreateUniversal(webServerTask, "webserverMaintenance", configMINIMAL_STACK_SIZE + 100, NULL, PRIORITY_WEBSERVER_MAINTENANCE, NULL, CORE_WEBSERVER_MAINTENANCE);
+  xTaskCreateUniversal(webServerTask, "webserverMaintenance", configMINIMAL_STACK_SIZE + 1000, NULL, PRIORITY_WEBSERVER_MAINTENANCE, NULL, CORE_WEBSERVER_MAINTENANCE);
 }
 
 void webServerTask(void* params) {

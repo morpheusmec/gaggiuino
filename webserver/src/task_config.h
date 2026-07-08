@@ -5,7 +5,6 @@
 // This file before AsyncTCP.h to ensure this configuration takes priority
 #ifndef CONFIG_ASYNC_TCP_RUNNING_CORE
 #define CONFIG_ASYNC_TCP_RUNNING_CORE 0
-#define CONFIG_ASYNC_TCP_USE_WDT 1
 #endif
 
 #include "FreeRTOS.h"

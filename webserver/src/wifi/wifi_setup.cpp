@@ -112,7 +112,7 @@ bool wifiConnect(String ssid, String pass, const uint32_t timeout) {
       return false;
     }
 
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
     delay(100);
   }
 

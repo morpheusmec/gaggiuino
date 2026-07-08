@@ -57,7 +57,7 @@ vector<uint8_t> McuComms::receiveMultiPacket() {
 
   while (currentPacket <= lastPacket) {
 #ifdef ESP32
-    esp_task_wdt_reset();
+    // esp_task_wdt_reset();
 #endif
 
     log("Handling packet %d\n", currentPacket);
@@ -75,7 +75,7 @@ vector<uint8_t> McuComms::receiveMultiPacket() {
     uint32_t waitStartedAt = millis();
     while (millis() - waitStartedAt < 50u && !dataAvailable) {
 #ifdef ESP32
-      esp_task_wdt_reset();
+      // esp_task_wdt_reset();
 #endif
       dataAvailable = transfer.available();
     }
