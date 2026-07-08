@@ -79,6 +79,7 @@ void onProfileRequested() {
 }
 void onNotification(const Notification& notification) {
   wsSendNotification(notification);
+  uiHandleNotification(notification);
 }
 void onDescalingProgressReceived(const DescalingProgress& progress) {
   wsSendDescalingProgress(progress);
