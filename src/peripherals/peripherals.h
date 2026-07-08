@@ -15,6 +15,8 @@ static inline void pinInit(void) {
   pinMode(thermoRDY, INPUT_PULLUP);
   digitalWrite(shutdownPin, HIGH);
   pinMode(shutdownPin, OUTPUT_OPEN_DRAIN);
+  digitalWrite(buzzerPin, HIGH);
+  pinMode(buzzerPin, OUTPUT);
 }
 
 static inline bool tempReady(void) {

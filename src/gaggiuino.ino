@@ -31,6 +31,8 @@ GaggiaSettings runningCfg;
 
 SystemState systemState;
 
+TOF tof;
+
 void setup(void) {
   LOG_INIT();
   LOG_INFO("Gaggiuino (fw: %s) booting", AUTO_VERSION);
@@ -38,6 +40,9 @@ void setup(void) {
   // Various pins operation mode handling
   pinInit();
   LOG_INFO("Pin init");
+  
+  adsInit();
+  LOG_INFO("Pressure sensor init");
 
   frontPanelLeds.setState(FrontLedsState::IDDLE);
   frontPanelLeds.updateLeds();
@@ -49,7 +54,7 @@ void setup(void) {
   #endif
 
   // Init the tof sensor
-  currentState.waterLevel = 30u;
+  TOFInit();
 
   // Initialize comms library for talking to the ESP mcu
   espCommsInit();
@@ -60,9 +65,6 @@ void setup(void) {
 
   thermocoupleInit();
   LOG_INFO("Thermocouple Init");
-
-  adsInit();
-  LOG_INFO("Pressure sensor init");
 
   // Scales handling
   scalesInit(runningCfg.scales);
@@ -87,6 +89,13 @@ void loop(void) {
   frontPanelLeds.updateLeds();
   espUpdateState();
   sysHealthCheck();
+  static uint32_t buzzerTimer = 0;
+  if ((PCF.value() & (1 << pgnBtn)) == LOW){
+    tone(buzzerPin, (millis() - buzzerTimer) % 10000);
+  } else {
+    buzzerTimer = millis();
+    noTone(buzzerPin);
+  }
 }
 
 //##############################################################################################################################
@@ -101,6 +110,7 @@ static void sensorsRead(void) {
   sensorsReadPressure();
   calculateWeightAndFlow();
   updateStartupTimer();
+  readTankWaterLevel();
 }
 
 static bool cup1_read_switch(void){
@@ -183,7 +193,7 @@ static void relaysActuate(void) {
   if (relNeeded && !relWasNeeded){
     setSol2Off();
     setSol3On();
-    delay(100);
+    delay(20);
   }
   else if (!relNeeded && relWasNeeded){
     shotEndTimer = millis();
@@ -319,6 +329,13 @@ static void calculateWeightAndFlow(void) {
     currentState.pumpCPS = getAndResetClickCounter();
     getAndResetLoadAverage();
     flowTimer = millis();
+  }
+}
+
+// return the reading in % of the tank water level.
+static void readTankWaterLevel(void) {
+  if (!currentState.brewActive || systemState.operationMode == OperationMode::DESCALE) {
+    currentState.waterLevel = tof.readLvl();
   }
 }
 
@@ -580,3 +597,7 @@ static void cpsInit(GaggiaSettings &runningCfg) {
   }
 }
 
+static void TOFInit() {
+  tof.init(systemState);
+  tof.setCustomRanges(tofStartValue, tofEndValue);
+}

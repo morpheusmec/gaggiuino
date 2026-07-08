@@ -21,6 +21,7 @@
 #include "functional/shot_profiler.h"
 #include "profiling_phases.h"
 #include "peripherals/esp_comms.h"
+#include "peripherals/tof.h"
 
 // Define some const values
 #if defined SINGLE_BOARD
@@ -52,6 +53,13 @@ enum class OPERATION_MODES {
   OPMODE_pressureBasedPreinfusionAndFlowProfile
 };
 
+#if not defined(TOF_START) || not defined(TOF_END)
+#define TOF_START 40u
+#define TOF_END 165u
+#endif
+
+const uint16_t tofStartValue = TOF_START; // Tof offset when tank is full
+const uint16_t tofEndValue = TOF_END; // Tof offset when tank is nearly empty
 const float weightRateThreshold = 9.f; // The rate of weigh random change(aka accidental scales touching)
 const float weightIncreaseThreshold = 40.f; // Accounting for placing a cup on the scales after initiating brew
 

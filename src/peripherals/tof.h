@@ -21,11 +21,8 @@ class TOF {
 
   private:
     uint32_t tofReading;
-    const std::array<uint16_t, 10> waterLvl = { 100u, 90u, 80u, 70u, 60u, 50u, 40u, 30u, 20u, 10u };
-    std::array<uint16_t, 9> ranges;
-
-    // Helper function to calculate ranges
-    void calculateRanges(uint16_t startValue, uint16_t endValue);
+    uint16_t tofStartValue = 50u; // mm
+    uint16_t tofEndValue = 200u; // mm
 };
 
 TOF::TOF() {}
@@ -41,18 +38,8 @@ void TOF::init(SystemState& systemState) {
 }
 
 void TOF::setCustomRanges(uint16_t startValue, uint16_t endValue) {
-  calculateRanges(startValue, endValue);
-}
-
-void TOF::calculateRanges(uint16_t startValue, uint16_t endValue) {
-  uint16_t step = (endValue - startValue) / (ranges.size() - 1);
-
-  uint16_t current = startValue;
-  std::generate(ranges.begin(), ranges.end(), [&current, step]() {
-    uint16_t value = current;
-    current += step;
-    return value;
-  });
+  TOF::tofStartValue = startValue;
+  TOF::tofEndValue = endValue;
 }
 
 uint16_t TOF::readLvl() {
@@ -65,13 +52,7 @@ uint16_t TOF::readLvl() {
 }
 
 uint16_t TOF::readRangeToPct(uint16_t val) {
-  for (size_t i = 0; i < ranges.size(); i++) {
-    if (val <= ranges[i]) {
-      return TOF::waterLvl[i];
-    }
-  }
-
-  return 4u;
+  return (uint16_t) constrain(map(val * 0.792 + 13.5, TOF::tofStartValue, TOF::tofEndValue, 100, 0), 0, 100);
 }
 
 #endif
