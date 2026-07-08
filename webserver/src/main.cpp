@@ -10,21 +10,18 @@ typedef unsigned int uint;
 #include "persistence/persistence.h"
 #include "state/state.h"
 #include "./log/log.h"
-#include <esp_display_panel.hpp>
-#include <lvgl.h>
-#include "lvgl_v8_port.h"
+#include "ui/screen.h"
 #include "ui/esp_ui.h"
 
-// GaggiaSettings settings;
-
-using namespace esp_panel::drivers;
-using namespace esp_panel::board;
 
 void setup() {
   LOG_INIT();
   REMOTE_LOG_INIT([](std::string message) {wsSendLog(message);});
   LOG_INFO("Starting setup");
-  
+
+  screenInit();
+  uiInit();
+
   initFS();
   persistence::init();
   state::init();
@@ -32,14 +29,6 @@ void setup() {
   wifiSetup();
   webServerSetup();
   // blescales::init();
-  
-  Board *board = new Board();
-  board->init();
-  assert(board->begin());
-  lvgl_port_init(board->getLCD(), board->getTouch());
-  lvgl_port_lock(-1);
-  uiInit();
-  lvgl_port_unlock();
   
   xTaskCreatePinnedToCore(uiHandleLoop, "screen_update", configMINIMAL_STACK_SIZE + 30384, NULL, PRIORITY_SCREEN_UPDATE, NULL, CORE_SCREEN_UPDATE);
   LOG_INFO("Setup complete");
